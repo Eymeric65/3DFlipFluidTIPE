@@ -10,6 +10,9 @@
     <Filter Include="CLASSsim">
       <UniqueIdentifier>{f728b2ef-2874-441a-9902-7fcd161e933b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="CUDA">
+      <UniqueIdentifier>{8fe643fb-bb77-4373-8ad8-1ef79dd78510}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Visual\Camera.h">
@@ -45,5 +48,10 @@
     <None Include="shader\vertexbase.vs">
       <Filter>shader</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CUDA\GridCalcul.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

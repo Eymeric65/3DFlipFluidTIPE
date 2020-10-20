@@ -95,6 +95,9 @@
     <None Include="shader\fragmentbase.fs" />
     <None Include="shader\vertexbase.vs" />
   </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="CUDA\GridCalcul.cu" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.targets" />

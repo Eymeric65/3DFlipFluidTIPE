@@ -126,6 +126,10 @@ int main()
 
     ParticleSystem PartEngine(PartCount);
 
+    FlipSim FlipEngine(10, 10, 10, 1, PartEngine);
+
+    FlipEngine.TransferToGrid();
+
     ///std::cout << "il y a " << PartCount << " particules" << std::endl;
 
     GLuint particles_position_buffer;
