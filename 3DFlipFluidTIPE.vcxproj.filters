@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Visual">
+      <UniqueIdentifier>{39de0fce-5eef-439b-87db-a3a87f8e4a0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shader">
+      <UniqueIdentifier>{1c2ee823-95c6-4ae2-911e-6792eb15897b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="CLASSsim">
+      <UniqueIdentifier>{f728b2ef-2874-441a-9902-7fcd161e933b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Visual\Camera.h">
+      <Filter>Visual</Filter>
+    </ClInclude>
+    <ClInclude Include="Visual\GeoFunc.h">
+      <Filter>Visual</Filter>
+    </ClInclude>
+    <ClInclude Include="Visual\Shader.h">
+      <Filter>Visual</Filter>
+    </ClInclude>
+    <ClInclude Include="CLASSsim\ParticleClass.h">
+      <Filter>CLASSsim</Filter>
+    </ClInclude>
+    <ClInclude Include="CLASSsim\FLIPimpl.h">
+      <Filter>CLASSsim</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="glad.c" />
+    <ClCompile Include="CLASSsim\ParticleClass.cpp">
+      <Filter>CLASSsim</Filter>
+    </ClCompile>
+    <ClCompile Include="CLASSsim\FLIPimpl.cpp">
+      <Filter>CLASSsim</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shader\fragmentbase.fs">
+      <Filter>shader</Filter>
+    </None>
+    <None Include="shader\vertexbase.vs">
+      <Filter>shader</Filter>
+    </None>
+  </ItemGroup>
+</Project>
