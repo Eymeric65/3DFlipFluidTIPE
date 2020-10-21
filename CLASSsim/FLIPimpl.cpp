@@ -1,5 +1,6 @@
 #include "FLIPimpl.h"
 #include <assert.h>
+#include <iostream>
 
 
 extern "C" void TrToGr(ParticleSystem * partEngine, FlipSim * flipEngine);
@@ -11,7 +12,7 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 	tileSize = tsize;
 
-	PartEngine = &partEngine;
+	partLink = &partEngine;
 
 	BoxIndice = make_uint3((int)(BoxSize.x / tileSize),
 							(int)(BoxSize.y/ tileSize),
@@ -26,8 +27,16 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 	IndiceCount = BoxIndice.x * BoxIndice.y * BoxIndice.z;
 
+	printf("il y a %d cases \n",IndiceCount);
+
+	printf("la boite possède (%d;%d;%d)cases \n", BoxIndice.x, BoxIndice.y, BoxIndice.z);
+
+
+
 	cudaMalloc(&GridSpeed, IndiceCount * sizeof(float3));
+
 	cudaMalloc(&GridCounter, IndiceCount * sizeof(float));
+	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
 
 	cudaMalloc(&GridPressure, IndiceCount * sizeof(float3));
 
@@ -37,10 +46,12 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 void FlipSim::TransferToGrid()
 {
-	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
-	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
+	//cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
+	//cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
 
-	TrToGr(PartEngine, this);
+	TrToGr(partLink, this);
+
+	
 
 }
 

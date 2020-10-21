@@ -6,9 +6,10 @@
 class FlipSim
 {
 
-	ParticleSystem *PartEngine; 
 
 public:
+
+	ParticleSystem* partLink;
 
 	float3 BoxSize;
 
@@ -19,13 +20,15 @@ public:
 	int IndiceCount;
 
 	float3* GridSpeed;
-	float3* GridCounter;
+	float* GridCounter;
 
 	float3* GridPressure;
 
 	FlipSim(float width,float height,float length,float tsize, ParticleSystem partEngine);
 
 	void TransferToGrid();
+
+	void StartCompute();
 
 	void endSim();
 

@@ -19,24 +19,26 @@ public:
 
 private:
 
-	struct cudaGraphicsResource* cuda_pos_resource;
 
-	size_t num_bytes_pos;
 
 public:
 
+	struct cudaGraphicsResource* cuda_pos_resource;
+
+	float3* Partpos;
+	size_t num_bytes_pos;
+
 	int PartCount;
 
-	float3* vit;
+	float3* Partvit;
 
-	float3* pos;
+	void StartCompute();
 
-	void Compute();
+	void EndCompute();
 
 	void linkPos(GLuint buffer);
 
 	void endSystem();
-
 
 };
 

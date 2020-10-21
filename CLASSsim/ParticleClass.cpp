@@ -1,31 +1,42 @@
 #include "ParticleClass.h"
+#include <iostream>
+#include <helper_cuda.h> 
 
 ParticleSystem::ParticleSystem(int partcount)
 {
     PartCount = partcount;
 
-    cudaMalloc(&vit, PartCount * sizeof(float3));
-    cudaMemset(vit, 0, PartCount * sizeof(float3));
+    checkCudaErrors(cudaMalloc(&Partvit, PartCount * sizeof(float3)) );
+    checkCudaErrors(cudaMemset(Partvit, 0, PartCount * sizeof(float3)) );
+
+    //cudaMalloc(&pos, PartCount * sizeof(float3));
+
 
 }
 
-void ParticleSystem::Compute()
+void ParticleSystem::StartCompute()
 {
-    cudaGraphicsMapResources(1, &cuda_pos_resource, 0);
+    checkCudaErrors( cudaGraphicsMapResources(1, &cuda_pos_resource, 0) );
 
-    cudaGraphicsResourceGetMappedPointer((void**)&pos, &num_bytes_pos, cuda_pos_resource);
+    checkCudaErrors( cudaGraphicsResourceGetMappedPointer((void**)&Partpos, &num_bytes_pos, cuda_pos_resource) );
 
-    cudaGraphicsUnmapResources(1, &cuda_pos_resource, 0);
+}
 
+void ParticleSystem::EndCompute()
+{
+    checkCudaErrors( cudaGraphicsUnmapResources(1, &cuda_pos_resource, 0) );
+
+    //std::cout << "la taille est " << vit[0].x << std::endl;
+    
 }
 
 void ParticleSystem::linkPos(GLuint buffer)
 {
-    cudaGraphicsGLRegisterBuffer(&cuda_pos_resource, buffer, cudaGraphicsRegisterFlagsNone);
+    checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_pos_resource, buffer, cudaGraphicsRegisterFlagsNone) );
 }
 
 void ParticleSystem::endSystem()
 {
-    cudaFree(vit);
+    cudaFree(Partvit);
 
 }

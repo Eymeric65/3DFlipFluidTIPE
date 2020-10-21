@@ -105,16 +105,16 @@ int main()
 
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 10; x += 1)
+    for (int x = 0; x < 2; x += 1)
     {
-        for (int y = 0; y < 20; y += 1)
+        for (int y = 0; y < 2; y += 1)
         {
-            for (int z = 0; z < 20; z += 1)
+            for (int z = 0; z < 2; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 1.0f + 25.0f;
-                translation.y = (float)y / 1.0f + 25.0f;
-                translation.z = (float)z / 1.0f + 25.0f;
+                translation.x = (float)x / 1.0f + 0.5f;
+                translation.y = (float)y / 1.0f + 0.5f;
+                translation.z = (float)z / 1.0f + 0.5f;
 
                 position.push_back(translation);
 
@@ -126,11 +126,14 @@ int main()
 
     ParticleSystem PartEngine(PartCount);
 
-    FlipSim FlipEngine(10, 10, 10, 1, PartEngine);
+    std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
-    FlipEngine.TransferToGrid();
+    FlipSim FlipEngine(3.0, 3.0, 3.0, 1.0, PartEngine);
 
-    ///std::cout << "il y a " << PartCount << " particules" << std::endl;
+    std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
+
+    std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
+
 
     GLuint particles_position_buffer;
     glGenBuffers(1, &particles_position_buffer);
@@ -141,10 +144,7 @@ int main()
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-
     PartEngine.linkPos(particles_position_buffer);
-
-
 
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -191,6 +191,17 @@ int main()
 
 
     int FPSlimiter = 0;
+
+    std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
+
+    PartEngine.StartCompute();
+    FlipEngine.partLink = &PartEngine; // ce bug de merde 
+
+    std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
+
+    FlipEngine.TransferToGrid();
+
+    //PartEngine.EndCompute();
 
     // render loop
     // -----------
@@ -261,7 +272,7 @@ int main()
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
 
-        PartEngine.Compute();
+        
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
