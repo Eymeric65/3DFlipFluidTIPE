@@ -28,13 +28,13 @@ public:
 
 	float timestep;
 
-	FlipSim(float width,float height,float length,float tsize,float tstep, ParticleSystem partEngine);
+	FlipSim(float width,float height,float length,float tsize, ParticleSystem partEngine);
 
 	void TransferToGrid();
 
-	void AddExternalForces();
+	void TransferToParticule();
 
-	void StartCompute();
+	void AddExternalForces();
 
 	void endSim();
 

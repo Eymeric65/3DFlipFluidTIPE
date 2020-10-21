@@ -105,11 +105,11 @@ int main()
 
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 2; x += 1)
+    for (int x = 0; x < 100; x += 1)
     {
-        for (int y = 0; y < 2; y += 1)
+        for (int y = 0; y < 100; y += 1)
         {
-            for (int z = 0; z < 2; z += 1)
+            for (int z = 0; z < 10; z += 1)
             {
                 glm::vec3 translation;
                 translation.x = (float)x / 1.0f + 1.5f;
@@ -124,11 +124,11 @@ int main()
 
     const int PartCount = position.size();
 
-    ParticleSystem PartEngine(PartCount);
+    ParticleSystem PartEngine(PartCount,0.01);
 
     //std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
-    FlipSim FlipEngine(4.0, 4.0, 4.0, 1.0,0.5, PartEngine);
+    FlipSim FlipEngine(102.0, 102.0, 12.0, 1.0, PartEngine);
 
     std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
 
@@ -201,7 +201,11 @@ int main()
 
     FlipEngine.TransferToGrid();
 
-    //PartEngine.EndCompute();
+    FlipEngine.AddExternalForces();
+
+    FlipEngine.TransferToParticule();
+
+    PartEngine.EndCompute();
 
     // render loop
     // -----------
@@ -271,8 +275,20 @@ int main()
         int lightPos = glGetUniformLocation(firstshader.ID, "lightPos");
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
+        // partie a commenter si il faut desactiver le render
+        PartEngine.StartCompute();
+        FlipEngine.partLink = &PartEngine; // ce bug de merde 
 
-        
+        FlipEngine.TransferToGrid();
+
+        FlipEngine.AddExternalForces();
+
+        FlipEngine.TransferToParticule();
+
+        PartEngine.Compute();
+
+        PartEngine.EndCompute();
+        //--------------------------------------------------------------------------------
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 

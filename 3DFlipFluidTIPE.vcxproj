@@ -99,6 +99,7 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="CUDA\GridCalcul.cu" />
+    <CudaCompile Include="CUDA\PartCalcul.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

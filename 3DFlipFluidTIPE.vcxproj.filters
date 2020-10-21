@@ -53,5 +53,8 @@
     <CudaCompile Include="CUDA\GridCalcul.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="CUDA\PartCalcul.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>

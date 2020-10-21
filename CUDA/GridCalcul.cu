@@ -70,11 +70,11 @@ __global__ void TransferToGrid(unsigned int partcount,float3* pos,float3* vit, f
             gridindexY<1 || gridindexY>=(BoxIndice.y-1) ||
             gridindexZ<1 || gridindexZ>=(BoxIndice.z-1))
         {
-            printf("particule number %d out of bound with indice : %d %d %d\n", index, gridindexX, gridindexY, gridindexZ);
+            //printf("particule number %d out of bound with indice : %d %d %d\n", index, gridindexX, gridindexY, gridindexZ);
         }
         else
         {
-            vit[index] = make_float3(1, 1, 1);
+            ///vit[index] = make_float3(1, 1, 1); test purpose only
             //printf("la case %d \n", gridind);
 
             float centerposX = gridindexX * tsize;
@@ -140,15 +140,67 @@ __global__ void addforces_k(uint3 boxind, float3* gridspeed, unsigned int* type,
 
     if (type[index] == 1)
     {
-        gridspeed[index].x += -9.81 * tstep; 
+        gridspeed[index].y += -9.81 * tstep; 
     }
 
 }
 
+// ce transfert de vitesse est vraiment plutot brutal méthode PIC
+__global__ void TransfertToParticule(unsigned int partcount, float3* pos, float3* vit, float3* gridspeed, float* gridcounter, float tsize, uint3 BoxIndice)
+{
+    unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int stride = blockDim.x * gridDim.x;
+    for (unsigned int i = index; i < partcount; i += stride)
+    {
+
+        //printf("index is %d \n", index);
+
+        int gridindexX = (int)(pos[index].x / tsize);
+        int gridindexY = (int)(pos[index].y / tsize);
+        int gridindexZ = (int)(pos[index].z / tsize);
+
+
+
+        if (gridindexX < 1 || gridindexX >= (BoxIndice.x -1) ||
+            gridindexY < 1 || gridindexY >= (BoxIndice.y -1) ||
+            gridindexZ < 1 || gridindexZ >= (BoxIndice.z -1))
+        {
+            //printf("particule number %d out of bound with indice : %d %d %d\n", index, gridindexX, gridindexY, gridindexZ);
+            vit[index] = make_float3(0, 0, 0);
+        }
+        else
+        {
+            
+            //printf("la case %d \n", gridind);
+
+            float centerposX = gridindexX * tsize;
+            float centerposY = gridindexY * tsize;
+            float centerposZ = gridindexZ * tsize;
+
+            unsigned int gridindX = getGridInd(gridindexX + staggeredGrid(centerposX, pos[index].x), gridindexY, gridindexZ, BoxIndice);
+            unsigned int gridindY = getGridInd(gridindexX, gridindexY + staggeredGrid(centerposY, pos[index].y), gridindexZ, BoxIndice);
+            unsigned int gridindZ = getGridInd(gridindexX, gridindexY, gridindexZ + staggeredGrid(centerposZ, pos[index].z), BoxIndice);
+
+            vit[index] = make_float3(gridspeed[gridindX].x, gridspeed[gridindY].y, gridspeed[gridindZ].z); // direct assigmement
+
+            //printf("la vitesse de la particule %d est %f %f %f \n", index, vit[index].x, vit[index].y, vit[index].z);
+
+        }
+
+        //printf("indice de la particule dans la grille %d %d \n ",index, getGridInd(gridindexX, gridindexY, gridindexZ, BoxIndice));
+
+        //pos[index] = make_float3(3, 3, 3);
+
+        //printf("la particule %d possède des coordonnées x: %f , y: %f , z: %f \n",index, pos[index].x, pos[index].y, pos[index].z);
+
+    }
+
+}
+// -------------------------------------------------------------------------------------------
 extern "C"
 void TrToGr(ParticleSystem *partEngine, FlipSim * flipEngine)
 {
-    std::cout <<"nombre de particule "<< partEngine->PartCount << std::endl;
+    //std::cout <<"nombre de particule "<< partEngine->PartCount << std::endl;
 
     TransferToGrid << <1000, 1024 >> > (partEngine->PartCount,
                                         partEngine->Partpos,
@@ -179,5 +231,18 @@ void addforces(ParticleSystem * partEngine, FlipSim * flipEngine)
                                       flipEngine->GridSpeed,
                                       flipEngine->type,
                                       flipEngine->timestep);
+
+}
+
+extern "C"
+void TrToPr(ParticleSystem * partEngine, FlipSim * flipEngine)
+{
+    TransfertToParticule << <1000, 1024 >> > (partEngine->PartCount,
+        partEngine->Partpos,
+        partEngine->Partvit,
+        flipEngine->GridSpeed,
+        flipEngine->GridCounter,
+        flipEngine->tileSize,
+        flipEngine->BoxIndice);
 
 }

@@ -7,7 +7,10 @@ extern "C" void TrToGr(ParticleSystem * partEngine, FlipSim * flipEngine);
 
 extern "C" void addforces(ParticleSystem * partEngine, FlipSim * flipEngine);
 
-FlipSim::FlipSim(float width, float height,float length, float tsize,float tstep, ParticleSystem partEngine)
+extern "C" void TrToPr(ParticleSystem * partEngine, FlipSim * flipEngine);
+
+
+FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSystem partEngine)
 {
 
 	BoxSize = make_float3(width, height, length);
@@ -16,7 +19,7 @@ FlipSim::FlipSim(float width, float height,float length, float tsize,float tstep
 
 	partLink = &partEngine;
 
-	timestep = tstep;
+	timestep = partEngine.TimeStep;
 
 	BoxIndice = make_uint3((int)(BoxSize.x / tileSize),
 							(int)(BoxSize.y/ tileSize),
@@ -55,6 +58,11 @@ FlipSim::FlipSim(float width, float height,float length, float tsize,float tstep
 void FlipSim::TransferToGrid()
 {
 	TrToGr(partLink, this);
+}
+
+void FlipSim::TransferToParticule()
+{
+	TrToPr(partLink, this);
 }
 
 void FlipSim::AddExternalForces()

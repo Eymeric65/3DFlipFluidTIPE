@@ -15,7 +15,7 @@ class ParticleSystem
 {
 public:
 
-	ParticleSystem(int partcount);
+	ParticleSystem(int partcount,float tstep);
 
 private:
 
@@ -32,7 +32,11 @@ public:
 
 	float3* Partvit;
 
+	float TimeStep;
+
 	void StartCompute();
+
+	void Compute();
 
 	void EndCompute();
 

@@ -2,9 +2,13 @@
 #include <iostream>
 #include <helper_cuda.h> 
 
-ParticleSystem::ParticleSystem(int partcount)
+extern "C" void eulercompute(ParticleSystem * partEngine);
+
+ParticleSystem::ParticleSystem(int partcount,float tstep)
 {
     PartCount = partcount;
+
+    TimeStep = tstep;
 
     checkCudaErrors(cudaMalloc(&Partvit, PartCount * sizeof(float3)) );
     checkCudaErrors(cudaMemset(Partvit, 0, PartCount * sizeof(float3)) );
@@ -20,6 +24,11 @@ void ParticleSystem::StartCompute()
 
     checkCudaErrors( cudaGraphicsResourceGetMappedPointer((void**)&Partpos, &num_bytes_pos, cuda_pos_resource) );
 
+}
+
+void ParticleSystem::Compute()
+{
+    eulercompute(this);
 }
 
 void ParticleSystem::EndCompute()
