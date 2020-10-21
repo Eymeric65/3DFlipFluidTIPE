@@ -32,6 +32,10 @@ public:
 
 	float3* Partvit;
 
+	float3 Boxsize;
+
+	float tilesize;
+
 	float TimeStep;
 
 	void StartCompute();

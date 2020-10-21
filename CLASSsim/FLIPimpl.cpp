@@ -11,6 +11,9 @@ extern "C" void TrToPr(ParticleSystem * partEngine, FlipSim * flipEngine);
 
 extern "C" void JacobiIter(FlipSim * flipEngine, unsigned int stepNb);
 
+
+extern "C" void AddPressureForce(FlipSim * flipEngine);
+
 FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSystem partEngine)
 {
 
@@ -77,7 +80,13 @@ void FlipSim::AddExternalForces()
 
 void FlipSim::PressureCompute()
 {
+	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float));
 	JacobiIter(this, 50);
+}
+
+void FlipSim::AddPressure()
+{
+	AddPressureForce(this);
 }
 
 void FlipSim::endSim()

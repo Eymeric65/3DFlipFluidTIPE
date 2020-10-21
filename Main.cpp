@@ -105,16 +105,16 @@ int main()
 
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 100; x += 1)
+    for (int x = 0; x < 20; x += 1)
     {
-        for (int y = 0; y < 100; y += 1)
+        for (int y = 0; y < 20; y += 1)
         {
             for (int z = 0; z < 20; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 1.0f + 8.5f;
-                translation.y = (float)y / 1.0f + 8.5f;
-                translation.z = (float)z / 1.0f + 8.5f;
+                translation.x = (float)x / 2.0f + 1.5f;
+                translation.y = (float)y / 2.0f + 1.5f;
+                translation.z = (float)z / 2.0f + 1.5f;
 
                 position.push_back(translation);
 
@@ -124,16 +124,18 @@ int main()
 
     const int PartCount = position.size();
 
-    ParticleSystem PartEngine(PartCount,0.01);
+    ParticleSystem PartEngine(PartCount,0.0002);
 
     //std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
-    FlipSim FlipEngine(120.0, 120.0, 40.0, 8.0, PartEngine);
+    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartEngine);
 
     std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
 
     //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
+    PartEngine.Boxsize = FlipEngine.BoxSize;
+    PartEngine.tilesize = FlipEngine.tileSize;
 
     GLuint particles_position_buffer;
     glGenBuffers(1, &particles_position_buffer);
@@ -207,6 +209,8 @@ int main()
 
     PartEngine.EndCompute();
 
+    std::cout << PartEngine.Boxsize.x << std::endl;
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -249,7 +253,7 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
 
 
-        view = glm::translate(view, glm::vec3(-50.0f, -50.0f, -150.0f));
+        view = glm::translate(view, glm::vec3(-20.0f, -20.0f, -30.0f));
 
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
 
@@ -284,6 +288,8 @@ int main()
         FlipEngine.AddExternalForces();
 
         FlipEngine.PressureCompute();
+
+        FlipEngine.AddPressure();
 
         FlipEngine.TransferToParticule();
 
