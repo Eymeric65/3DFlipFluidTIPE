@@ -9,6 +9,7 @@ extern "C" void addforces(ParticleSystem * partEngine, FlipSim * flipEngine);
 
 extern "C" void TrToPr(ParticleSystem * partEngine, FlipSim * flipEngine);
 
+extern "C" void JacobiIter(FlipSim * flipEngine, unsigned int stepNb);
 
 FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSystem partEngine)
 {
@@ -46,8 +47,10 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 	cudaMalloc(&GridCounter, IndiceCount * sizeof(float));
 	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
 
-	cudaMalloc(&GridPressure, IndiceCount * sizeof(float3));
-	cudaMemset(GridPressure, 0, IndiceCount * sizeof(float3));
+	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float3));
+	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float3));
+
+	cudaMalloc(&GridPressureA, IndiceCount * sizeof(float3));
 
 	cudaMalloc(&type, IndiceCount * sizeof(unsigned int));
 
@@ -57,6 +60,8 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 void FlipSim::TransferToGrid()
 {
+	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
+	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
 	TrToGr(partLink, this);
 }
 
@@ -70,10 +75,51 @@ void FlipSim::AddExternalForces()
 	addforces(partLink, this);
 }
 
+void FlipSim::PressureCompute()
+{
+	JacobiIter(this, 50);
+}
+
 void FlipSim::endSim()
 {
 	cudaFree(GridSpeed);
 	cudaFree(GridCounter);
 	cudaFree(type);
-	cudaFree(GridPressure);
+	cudaFree(GridPressureB);
+	cudaFree(GridPressureA);
 }
+
+/*
+__device__ unsigned int getGridInd(unsigned int indiceX, unsigned int indiceY,unsigned int indiceZ,uint3 BoxIndice)
+{
+	return indiceZ + indiceY*BoxIndice.z + indiceX*BoxIndice.z*BoxIndice.y;
+}
+
+__device__ float3 getDiv(unsigned int x, unsigned int y, unsigned int z,float3* Gridspeed, uint3 BoxIndice,float tsize)
+{
+
+	if (x > 0 && y > 0 && z > 0)
+	{
+		unsigned int p = getGridInd(x, y, z, BoxIndice);
+		unsigned int xm = getGridInd(x - 1, y, z, BoxIndice);
+
+		unsigned int ym = getGridInd(x, y - 1, z, BoxIndice);
+
+		unsigned int zm = getGridInd(x, y, z - 1, BoxIndice);
+
+		float xr = Gridspeed[p].x - Gridspeed[xm].x;
+
+		float yr = Gridspeed[p].y - Gridspeed[ym].y;
+
+		float zr = Gridspeed[p].z - Gridspeed[zm].z;
+
+		return make_float3(xr / tsize, yr / tsize, zr / tsize);
+	}
+	else
+	{
+		return make_float3(0.69, 0.69, 0.69);
+	}
+
+
+}
+*/

@@ -12,7 +12,7 @@ ParticleSystem::ParticleSystem(int partcount,float tstep)
 
     checkCudaErrors(cudaMalloc(&Partvit, PartCount * sizeof(float3)) );
     checkCudaErrors(cudaMemset(Partvit, 0, PartCount * sizeof(float3)) );
-
+    std::cout << "reset partvit" << std::endl;
     //cudaMalloc(&pos, PartCount * sizeof(float3));
 
 

@@ -24,7 +24,9 @@ public:
 
 	unsigned int* type; // 0 is solid 1 is fluid 2 is air
 
-	float3* GridPressure;
+	float3* GridPressureB;
+
+	float3* GridPressureA;
 
 	float timestep;
 
@@ -35,6 +37,8 @@ public:
 	void TransferToParticule();
 
 	void AddExternalForces();
+
+	void PressureCompute();
 
 	void endSim();
 

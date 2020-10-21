@@ -109,12 +109,12 @@ int main()
     {
         for (int y = 0; y < 100; y += 1)
         {
-            for (int z = 0; z < 10; z += 1)
+            for (int z = 0; z < 20; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 1.0f + 1.5f;
-                translation.y = (float)y / 1.0f + 1.5f;
-                translation.z = (float)z / 1.0f + 1.5f;
+                translation.x = (float)x / 1.0f + 8.5f;
+                translation.y = (float)y / 1.0f + 8.5f;
+                translation.z = (float)z / 1.0f + 8.5f;
 
                 position.push_back(translation);
 
@@ -128,7 +128,7 @@ int main()
 
     //std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
-    FlipSim FlipEngine(102.0, 102.0, 12.0, 1.0, PartEngine);
+    FlipSim FlipEngine(120.0, 120.0, 40.0, 8.0, PartEngine);
 
     std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
 
@@ -280,8 +280,10 @@ int main()
         FlipEngine.partLink = &PartEngine; // ce bug de merde 
 
         FlipEngine.TransferToGrid();
-
+        
         FlipEngine.AddExternalForces();
+
+        FlipEngine.PressureCompute();
 
         FlipEngine.TransferToParticule();
 
