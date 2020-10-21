@@ -22,11 +22,17 @@ public:
 	float3* GridSpeed;
 	float* GridCounter;
 
+	unsigned int* type; // 0 is solid 1 is fluid 2 is air
+
 	float3* GridPressure;
 
-	FlipSim(float width,float height,float length,float tsize, ParticleSystem partEngine);
+	float timestep;
+
+	FlipSim(float width,float height,float length,float tsize,float tstep, ParticleSystem partEngine);
 
 	void TransferToGrid();
+
+	void AddExternalForces();
 
 	void StartCompute();
 

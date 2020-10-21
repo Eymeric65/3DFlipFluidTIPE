@@ -5,7 +5,9 @@
 
 extern "C" void TrToGr(ParticleSystem * partEngine, FlipSim * flipEngine);
 
-FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSystem partEngine)
+extern "C" void addforces(ParticleSystem * partEngine, FlipSim * flipEngine);
+
+FlipSim::FlipSim(float width, float height,float length, float tsize,float tstep, ParticleSystem partEngine)
 {
 
 	BoxSize = make_float3(width, height, length);
@@ -13,6 +15,8 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 	tileSize = tsize;
 
 	partLink = &partEngine;
+
+	timestep = tstep;
 
 	BoxIndice = make_uint3((int)(BoxSize.x / tileSize),
 							(int)(BoxSize.y/ tileSize),
@@ -34,11 +38,15 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 
 	cudaMalloc(&GridSpeed, IndiceCount * sizeof(float3));
+	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
 
 	cudaMalloc(&GridCounter, IndiceCount * sizeof(float));
 	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
 
 	cudaMalloc(&GridPressure, IndiceCount * sizeof(float3));
+	cudaMemset(GridPressure, 0, IndiceCount * sizeof(float3));
+
+	cudaMalloc(&type, IndiceCount * sizeof(unsigned int));
 
 
 
@@ -46,18 +54,18 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 void FlipSim::TransferToGrid()
 {
-	//cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
-	//cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
-
 	TrToGr(partLink, this);
+}
 
-	
-
+void FlipSim::AddExternalForces()
+{
+	addforces(partLink, this);
 }
 
 void FlipSim::endSim()
 {
 	cudaFree(GridSpeed);
 	cudaFree(GridCounter);
+	cudaFree(type);
 	cudaFree(GridPressure);
 }

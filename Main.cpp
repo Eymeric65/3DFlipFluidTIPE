@@ -112,9 +112,9 @@ int main()
             for (int z = 0; z < 2; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 1.0f + 0.5f;
-                translation.y = (float)y / 1.0f + 0.5f;
-                translation.z = (float)z / 1.0f + 0.5f;
+                translation.x = (float)x / 1.0f + 1.5f;
+                translation.y = (float)y / 1.0f + 1.5f;
+                translation.z = (float)z / 1.0f + 1.5f;
 
                 position.push_back(translation);
 
@@ -126,13 +126,13 @@ int main()
 
     ParticleSystem PartEngine(PartCount);
 
-    std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
+    //std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
-    FlipSim FlipEngine(3.0, 3.0, 3.0, 1.0, PartEngine);
+    FlipSim FlipEngine(4.0, 4.0, 4.0, 1.0,0.5, PartEngine);
 
     std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
 
-    std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
+    //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
 
     GLuint particles_position_buffer;
@@ -192,12 +192,12 @@ int main()
 
     int FPSlimiter = 0;
 
-    std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
+    //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
     PartEngine.StartCompute();
     FlipEngine.partLink = &PartEngine; // ce bug de merde 
 
-    std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
+    //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
     FlipEngine.TransferToGrid();
 
