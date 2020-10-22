@@ -82,13 +82,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CLASSsim\FLIPimpl.cpp" />
-    <ClCompile Include="CLASSsim\ParticleClass.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLASSsim\FLIPimpl.h" />
-    <ClInclude Include="CLASSsim\ParticleClass.h" />
     <ClInclude Include="Visual\Camera.h" />
     <ClInclude Include="Visual\GeoFunc.h" />
     <ClInclude Include="Visual\Shader.h" />
@@ -98,8 +96,7 @@
     <None Include="shader\vertexbase.vs" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="CUDA\GridCalcul.cu" />
-    <CudaCompile Include="CUDA\PartCalcul.cu" />
+    <CudaCompile Include="CUDA\CUDAkern.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

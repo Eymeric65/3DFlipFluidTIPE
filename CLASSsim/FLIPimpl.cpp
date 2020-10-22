@@ -3,27 +3,36 @@
 #include <iostream>
 
 
-extern "C" void TrToGr(ParticleSystem * partEngine, FlipSim * flipEngine);
+extern "C" void TrToGr( FlipSim * flipEngine);
 
-extern "C" void addforces(ParticleSystem * partEngine, FlipSim * flipEngine);
+extern "C" void addforces( FlipSim * flipEngine);
 
-extern "C" void TrToPr(ParticleSystem * partEngine, FlipSim * flipEngine);
+extern "C" void TrToPr( FlipSim * flipEngine);
 
-extern "C" void JacobiIter(FlipSim * flipEngine, unsigned int stepNb);
+extern "C" void JacobiIter(FlipSim * flipEngine,unsigned int stepNb);
 
 
 extern "C" void AddPressureForce(FlipSim * flipEngine);
 
-FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSystem partEngine)
+extern "C" void eulercompute(FlipSim * flipEngine);
+
+FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned int partcount,float tstep)
 {
+
+	PartCount = partcount;
+
+	TimeStep = tstep;
+
+
+
+	std::cout << "reset partvit" << std::endl;
+	//cudaMalloc(&pos, PartCount * sizeof(float3));
 
 	BoxSize = make_float3(width, height, length);
 
 	tileSize = tsize;
 
-	partLink = &partEngine;
 
-	timestep = partEngine.TimeStep;
 
 	BoxIndice = make_uint3((int)(BoxSize.x / tileSize),
 							(int)(BoxSize.y/ tileSize),
@@ -42,13 +51,14 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 	printf("la boite possède (%d;%d;%d)cases \n", BoxIndice.x, BoxIndice.y, BoxIndice.z);
 
-
+	cudaMalloc(&Partvit, PartCount * sizeof(float3));
+	cudaMemset(Partvit, 0, PartCount * sizeof(float3));
 
 	cudaMalloc(&GridSpeed, IndiceCount * sizeof(float3));
 	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
 
-	cudaMalloc(&GridCounter, IndiceCount * sizeof(float));
-	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
+	cudaMalloc(&GridWeight, IndiceCount * sizeof(float));
+	cudaMemset(GridWeight, 0, IndiceCount * sizeof(float));
 
 	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float3));
 	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float3));
@@ -63,19 +73,19 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, ParticleSy
 
 void FlipSim::TransferToGrid()
 {
-	cudaMemset(GridCounter, 0, IndiceCount * sizeof(float));
+	cudaMemset(GridWeight, 0, IndiceCount * sizeof(float));
 	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
-	TrToGr(partLink, this);
+	TrToGr(this);
 }
 
 void FlipSim::TransferToParticule()
 {
-	TrToPr(partLink, this);
+	TrToPr(this);
 }
 
 void FlipSim::AddExternalForces()
 {
-	addforces(partLink, this);
+	addforces( this);
 }
 
 void FlipSim::PressureCompute()
@@ -92,43 +102,36 @@ void FlipSim::AddPressure()
 void FlipSim::endSim()
 {
 	cudaFree(GridSpeed);
-	cudaFree(GridCounter);
+	cudaFree(GridWeight);
 	cudaFree(type);
 	cudaFree(GridPressureB);
 	cudaFree(GridPressureA);
+
+	cudaFree(Partvit);
 }
 
-/*
-__device__ unsigned int getGridInd(unsigned int indiceX, unsigned int indiceY,unsigned int indiceZ,uint3 BoxIndice)
+void FlipSim::StartCompute()
 {
-	return indiceZ + indiceY*BoxIndice.z + indiceX*BoxIndice.z*BoxIndice.y;
+	cudaGraphicsMapResources(1, &cuda_pos_resource, 0);
+
+	cudaGraphicsResourceGetMappedPointer((void**)&Partpos, &num_bytes_pos, cuda_pos_resource);
+
 }
 
-__device__ float3 getDiv(unsigned int x, unsigned int y, unsigned int z,float3* Gridspeed, uint3 BoxIndice,float tsize)
+void FlipSim::linkPos(GLuint buffer)
 {
+	cudaGraphicsGLRegisterBuffer(&cuda_pos_resource, buffer, cudaGraphicsRegisterFlagsNone);
+}
 
-	if (x > 0 && y > 0 && z > 0)
-	{
-		unsigned int p = getGridInd(x, y, z, BoxIndice);
-		unsigned int xm = getGridInd(x - 1, y, z, BoxIndice);
+void FlipSim::Compute()
+{
+	eulercompute(this);
+}
 
-		unsigned int ym = getGridInd(x, y - 1, z, BoxIndice);
+void FlipSim::EndCompute()
+{
+	cudaGraphicsUnmapResources(1, &cuda_pos_resource, 0);
 
-		unsigned int zm = getGridInd(x, y, z - 1, BoxIndice);
-
-		float xr = Gridspeed[p].x - Gridspeed[xm].x;
-
-		float yr = Gridspeed[p].y - Gridspeed[ym].y;
-
-		float zr = Gridspeed[p].z - Gridspeed[zm].z;
-
-		return make_float3(xr / tsize, yr / tsize, zr / tsize);
-	}
-	else
-	{
-		return make_float3(0.69, 0.69, 0.69);
-	}
-
+	//std::cout << "la taille est " << vit[0].x << std::endl;
 
 }
-*/

@@ -21,8 +21,6 @@
 
 #include "Visual/GeoFunc.h"
 
-#include "CLASSsim/ParticleClass.h"
-
 #include "CLASSsim/FLIPimpl.h"
 
 //#include<sphere.cpp>
@@ -124,18 +122,18 @@ int main()
 
     const int PartCount = position.size();
 
-    ParticleSystem PartEngine(PartCount,0.0002);
+    //ParticleSystem PartEngine(PartCount,0.0002);
 
     //std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
-    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartEngine);
+    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartCount,0.1);
 
-    std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
+    ///std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
 
     //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
-    PartEngine.Boxsize = FlipEngine.BoxSize;
-    PartEngine.tilesize = FlipEngine.tileSize;
+    ///PartEngine.Boxsize = FlipEngine.BoxSize;
+    ///PartEngine.tilesize = FlipEngine.tileSize;
 
     GLuint particles_position_buffer;
     glGenBuffers(1, &particles_position_buffer);
@@ -146,7 +144,7 @@ int main()
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    PartEngine.linkPos(particles_position_buffer);
+    FlipEngine.linkPos(particles_position_buffer);
 
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -196,8 +194,8 @@ int main()
 
     //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
-    PartEngine.StartCompute();
-    FlipEngine.partLink = &PartEngine; // ce bug de merde 
+    FlipEngine.StartCompute();
+    ///FlipEngine.partLink = &PartEngine; // ce bug de merde 
 
     //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
@@ -207,9 +205,9 @@ int main()
 
     FlipEngine.TransferToParticule();
 
-    PartEngine.EndCompute();
+    FlipEngine.EndCompute();
 
-    std::cout << PartEngine.Boxsize.x << std::endl;
+    ///std::cout << PartEngine.Boxsize.x << std::endl;
 
     // render loop
     // -----------
@@ -280,8 +278,8 @@ int main()
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
         // partie a commenter si il faut desactiver le render
-        PartEngine.StartCompute();
-        FlipEngine.partLink = &PartEngine; // ce bug de merde 
+        FlipEngine.StartCompute();
+        ///FlipEngine.partLink = &PartEngine; // ce bug de merde 
 
         FlipEngine.TransferToGrid();
         
@@ -293,9 +291,9 @@ int main()
 
         FlipEngine.TransferToParticule();
 
-        PartEngine.Compute();
+        FlipEngine.Compute();
 
-        PartEngine.EndCompute();
+        FlipEngine.EndCompute();
         //--------------------------------------------------------------------------------
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
@@ -320,7 +318,7 @@ int main()
     //glDeleteBuffers(1, &EBO);
     //glDeleteProgram(shaderProgram);
 
-    PartEngine.endSystem();
+    ///7PartEngine.endSystem();
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

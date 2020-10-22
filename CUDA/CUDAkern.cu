@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cuda_runtime.h>
 #include "device_launch_parameters.h"
-#include "CLASSsim/ParticleClass.h"
 #include "CLASSsim/FLIPimpl.h"
 #include <helper_cuda.h> 
 
@@ -341,54 +340,111 @@ __global__ void TransfertToParticule(unsigned int partcount, float3* pos, float3
     }
 
 }
+
+__global__ void EulerIntegration(unsigned int partcount, float3* pos, float3* vit, float tstep, float3 boxsize, float tsize)
+{
+    unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int stride = blockDim.x * gridDim.x;
+    for (unsigned int i = index; i < partcount; i += stride)
+    {
+        pos[index].x += vit[index].x * tstep;
+        pos[index].y += vit[index].y * tstep;
+        pos[index].z += vit[index].z * tstep;
+
+        if (pos[index].x < tsize)
+        {
+            pos[index].x = tsize * 1.1;
+        }
+        if (pos[index].x > boxsize.x - tsize)
+        {
+            pos[index].x = boxsize.x - tsize * 1.1;
+        }
+
+        if (pos[index].y < tsize)
+        {
+            pos[index].y = tsize * 1.1;
+        }
+        if (pos[index].y > boxsize.y - tsize)
+        {
+            pos[index].y = boxsize.y - tsize * 1.1;
+        }
+
+        if (pos[index].z < tsize)
+        {
+            pos[index].z = tsize * 1.1;
+        }
+        if (pos[index].z > boxsize.z - tsize)
+        {
+            pos[index].z = boxsize.z - tsize * 1.1;
+        }
+    }
+}
+
+extern "C"
+void eulercompute(FlipSim * partEngine)
+{
+    EulerIntegration << <1000, 1024 >> > (
+        partEngine->PartCount,
+        partEngine->Partpos,
+        partEngine->Partvit,
+        partEngine->TimeStep,
+        partEngine->BoxSize,
+        partEngine->tileSize);
+}
 // -------------------------------------------------------------------------------------------
 extern "C"
-void TrToGr(ParticleSystem *partEngine, FlipSim * flipEngine)
+void TrToGr( FlipSim * flipEngine)
 {
     //std::cout <<"nombre de particule "<< partEngine->PartCount << std::endl;
 
-    TransferToGrid << <1000, 1024 >> > (partEngine->PartCount,
-                                        partEngine->Partpos,
-                                        partEngine->Partvit,
-                                        flipEngine->GridSpeed,
-                                        flipEngine->GridCounter,
-                                        flipEngine->tileSize,
-                                        flipEngine->BoxIndice);
-
-    uint3 box = flipEngine->BoxIndice;
-    
-    dim3 numblocks(box.x, box.y, box.z);
-    
-    gridnormal << <numblocks, 1 >> > (  box,
-                                        flipEngine->GridSpeed,
-                                        flipEngine->GridCounter,
-                                        flipEngine->type);
-}
-
-extern "C"
-void addforces(ParticleSystem * partEngine, FlipSim * flipEngine)
-{
-    uint3 box = flipEngine->BoxIndice;
-
-    dim3 numblocks(box.x, box.y, box.z);
-
-    addforces_k << <numblocks, 1 >> > (box,
-                                      flipEngine->GridSpeed,
-                                      flipEngine->type,
-                                      flipEngine->timestep);
-
-    boundariescondition << <numblocks, 1 >> > (box, flipEngine->GridSpeed);
-
-}
-
-extern "C"
-void TrToPr(ParticleSystem * partEngine, FlipSim * flipEngine)
-{
-    TransfertToParticule << <1000, 1024 >> > (partEngine->PartCount,
-        partEngine->Partpos,
-        partEngine->Partvit,
+    TransferToGrid << <1000, 1024 >> > (
+        flipEngine->PartCount,
+        flipEngine->Partpos,
+        flipEngine->Partvit,
         flipEngine->GridSpeed,
-        flipEngine->GridCounter,
+        flipEngine->GridWeight,
+        flipEngine->tileSize,
+        flipEngine->BoxIndice);
+
+    uint3 box = flipEngine->BoxIndice;
+    
+    dim3 numblocks(box.x, box.y, box.z);
+    
+    gridnormal << <numblocks, 1 >> > (
+        box,
+        flipEngine->GridSpeed,
+        flipEngine->GridWeight,
+        flipEngine->type);
+}
+
+extern "C"
+void addforces( FlipSim * flipEngine)
+{
+    uint3 box = flipEngine->BoxIndice;
+
+    dim3 numblocks(box.x, box.y, box.z);
+
+    addforces_k << <numblocks, 1 >> > (
+        box,
+        flipEngine->GridSpeed,
+        flipEngine->type,
+        flipEngine->TimeStep);
+
+    boundariescondition << <numblocks, 1 >> > (
+        box,
+        flipEngine->GridSpeed);
+
+}
+
+extern "C"
+void TrToPr(FlipSim * flipEngine)
+{
+    TransfertToParticule << <1000, 1024 >> > (
+        flipEngine->PartCount,
+        flipEngine->Partpos,
+        flipEngine->Partvit,
+        flipEngine->GridSpeed,
+        flipEngine->GridWeight,
         flipEngine->tileSize,
         flipEngine->BoxIndice);
 
@@ -407,16 +463,20 @@ void JacobiIter( FlipSim * flipEngine, unsigned int stepNb)
     for (int i = 0; i < stepNb; i += 1)
     {
         
-        JacobiIterationForPressure << <numblocks, 1 >> > (box,
+        JacobiIterationForPressure << <numblocks, 1 >> > (
+            box,
             flipEngine->GridSpeed,
             flipEngine->GridPressureB,
             flipEngine->GridPressureA,
             flipEngine->type,
             flipEngine->tileSize,
             10,
-            flipEngine->GridCounter);
+            flipEngine->GridWeight);
             
-        PressureCopy<<<numblocks,1>>>(box, flipEngine->GridPressureB, flipEngine->GridPressureA);
+        PressureCopy<<<numblocks,1>>>(
+            box, 
+            flipEngine->GridPressureB, 
+            flipEngine->GridPressureA);
 
     }
 
@@ -429,7 +489,12 @@ void AddPressureForce(FlipSim * flipEngine)
 
     dim3 numblocks(box.x, box.y, box.z);
 
-    addpressure_k<<<numblocks ,1>>>(box, flipEngine->GridSpeed, flipEngine->GridPressureA, flipEngine->type, 1, flipEngine->tileSize);
+    addpressure_k<<<numblocks ,1>>>(
+        box,
+        flipEngine->GridSpeed, 
+        flipEngine->GridPressureA, 
+        flipEngine->type, 1, 
+        flipEngine->tileSize);
 
 
 }

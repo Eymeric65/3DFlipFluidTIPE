@@ -24,9 +24,6 @@
     <ClInclude Include="Visual\Shader.h">
       <Filter>Visual</Filter>
     </ClInclude>
-    <ClInclude Include="CLASSsim\ParticleClass.h">
-      <Filter>CLASSsim</Filter>
-    </ClInclude>
     <ClInclude Include="CLASSsim\FLIPimpl.h">
       <Filter>CLASSsim</Filter>
     </ClInclude>
@@ -34,9 +31,6 @@
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="glad.c" />
-    <ClCompile Include="CLASSsim\ParticleClass.cpp">
-      <Filter>CLASSsim</Filter>
-    </ClCompile>
     <ClCompile Include="CLASSsim\FLIPimpl.cpp">
       <Filter>CLASSsim</Filter>
     </ClCompile>
@@ -50,10 +44,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="CUDA\GridCalcul.cu">
-      <Filter>CUDA</Filter>
-    </CudaCompile>
-    <CudaCompile Include="CUDA\PartCalcul.cu">
+    <CudaCompile Include="CUDA\CUDAkern.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
   </ItemGroup>
