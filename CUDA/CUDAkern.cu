@@ -93,23 +93,34 @@ __global__ void addforces_k(uint3 boxind, float3* gridspeed, unsigned int* type,
 
 }
 
-__global__ void boundariescondition(uint3 boxind, float3* gridspeed)
+__global__ void boundariescondition(uint3 boxind, float3* gridspeed, unsigned int* type)
 {
     unsigned int index = getGridInd(blockIdx.x, blockIdx.y, blockIdx.z, boxind);
+    unsigned int indexX = getGridInd(blockIdx.x-1, blockIdx.y, blockIdx.z, boxind);
+    unsigned int indexY = getGridInd(blockIdx.x, blockIdx.y-1, blockIdx.z, boxind);
+    unsigned int indexZ = getGridInd(blockIdx.x, blockIdx.y, blockIdx.z-1, boxind);
 
-    if (blockIdx.x == 0 || blockIdx.x >= (boxind.x - 2))
+    if (type[index]==0 )
     {
         gridspeed[index].x = 0;
-    }
-
-    if (blockIdx.y == 0 || blockIdx.y >= (boxind.y - 2))
-    {
         gridspeed[index].y = 0;
+        gridspeed[index].z = 0;
     }
 
-    if (blockIdx.z == 0 || blockIdx.z >= (boxind.z - 2))
+    if ((int)(blockIdx.x ) >= 1 && type[indexX] == 0)
     {
-        gridspeed[index].z = 0;
+        //printf("lol %d %d \n", (int)(blockIdx.x - 1)>0, (blockIdx.x - 1));
+        gridspeed[indexX].x = 0;
+    }
+
+    if ((int)(blockIdx.y) >= 1 && type[indexY] == 0)
+    {
+        gridspeed[indexY].y = 0;
+    }
+
+    if ((int)(blockIdx.z) >= 1 && type[indexZ] == 0)
+    {
+        gridspeed[indexZ].z = 0;
     }
 }
 
@@ -132,17 +143,17 @@ __global__ void addpressure_k(uint3 boxind, float3* gridspeed, float* gridpressu
        unsigned int indexZp = index + 1;
 
        
-       if (blockIdx.x + 1 != boxind.x - 1)
+       if (type[indexXp]!=0)
        {
            gridspeed[index].x -= (gridpressure[indexXp] - gridpressure[index]) / tsize;
        }
 
-       if (blockIdx.y + 1 != boxind.y - 1)
+       if (type[indexYp] != 0)
        {
            gridspeed[index].y -= (gridpressure[indexYp] - gridpressure[index]) / tsize;
        }
 
-       if (blockIdx.z + 1 != boxind.z - 1)
+       if (type[indexZp] != 0)
        {
            gridspeed[index].z -= (gridpressure[indexZp] - gridpressure[index]) / tsize;
        }
@@ -150,11 +161,11 @@ __global__ void addpressure_k(uint3 boxind, float3* gridspeed, float* gridpressu
 
        /*
        gridspeed[index].x -= (gridpressure[indexXp] - gridpressure[index]) / tsize;
-       gridspeed[index].y -= (gridpressure[indexYp] - gridpressure[index]) / tsize;
+       gridspeed[index].y -= (gridpressure[indexYp] - gridspressure[index]) / tsize;
        gridspeed[index].z -= (gridpressure[indexZp] - gridpressure[index]) / tsize;
        */
-       //float divg = (gridspeed[index].x - gridspeed[indexXm].x + gridspeed[index].y - gridspeed[indexYm].y + gridspeed[index].z - gridspeed[indexZm].z) / tsize;
-       //if (abs(divg)>1) { printf("la divergence est de : %f \n", divg); }
+       float divg = (gridspeed[index].x - gridspeed[indexXm].x + gridspeed[index].y - gridspeed[indexYm].y + gridspeed[index].z - gridspeed[indexZm].z) / tsize;
+       if (abs(divg)>1) { printf("la divergence est de : %f \n", divg); }
    }
 
 }
@@ -179,55 +190,98 @@ __global__ void JacobiIterationForPressure(uint3 boxind, float3* gridspeed,float
         unsigned int indexZm = index - 1;
         unsigned int indexZp = index + 1;
 
-        float divg =
-            ( gridspeed[index].x - gridspeed[indexXm].x 
-            + gridspeed[index].y - gridspeed[indexYm].y 
-            + gridspeed[index].z - gridspeed[indexZm].z - fmaxf(GridCounter[index] - density, 0)) / tsize;
+
 
         float pxm = 0;
         if (blockIdx.x - 1 != 0)
         {
             boundCounter++;
-            float pxm = gridpressureB[indexXm];
+             pxm = gridpressureB[indexXm];
         }
+        //printf("ah %f \n", pxm);
 
         float pxp = 0;
         if (blockIdx.x + 1 != boxind.x-1)
         {
             boundCounter++;
-            float pxp = gridpressureB[indexXp];
+             pxp = gridpressureB[indexXp];
         }
 
         float pym = 0;
         if (blockIdx.y - 1 != 0)
         {
             boundCounter++;
-            float pym = gridpressureB[indexYm];
+             pym = gridpressureB[indexYm];
         }
 
         float pyp = 0;
         if (blockIdx.y + 1 != boxind.y - 1)
         {
             boundCounter++;
-            float pyp = gridpressureB[indexYp];
+             pyp = gridpressureB[indexYp];
         }
 
         float pzm = 0;
         if (blockIdx.z - 1 != 0)
         {
             boundCounter++;
-            float pzm = gridpressureB[indexZm];
+             pzm = gridpressureB[indexZm];
         }
 
         float pzp = 0;
         if (blockIdx.z + 1 != boxind.z - 1)
         {
             boundCounter++;
-            float pzp = gridpressureB[indexZp];
+             pzp = gridpressureB[indexZp];
         }
-        
+        float divg =
+            (gridspeed[index].x - gridspeed[indexXm].x
+                +gridspeed[index].y - gridspeed[indexYm].y
+                +gridspeed[index].z - gridspeed[indexZm].z ) / tsize;
 
+        /*
+        float pxm = 0;
+        float dxm = 0;
+        if (blockIdx.x > 0)
+        {
+             pxm = gridpressureB[indexXm];
+             dxm = gridspeed[index].x - gridspeed[indexXm].x;
+        }
+        float pxp = 0;
+        if (blockIdx.x < boxind.x-1)
+        {
+             pxp = gridpressureB[indexXp];
+        }
+        float pym = 0;
+        float dym = 0;
+        if (blockIdx.y > 0)
+        {
+             pym = gridpressureB[indexYm];
+             dym = gridspeed[index].y - gridspeed[indexYm].y;
+        }
+        float pyp = 0;
+        if (blockIdx.y < boxind.y - 1)
+        {
+             pyp = gridpressureB[indexYp];
+        }
+        float pzm = 0;
+        float dzm = 0;
+        if (blockIdx.z > 0)
+        {
+             pzm = gridpressureB[indexZm];
+             dzm = gridspeed[index].z - gridspeed[indexZm].z;
+        }
+        float pzp = 0;
+        if (blockIdx.z < boxind.z - 1)
+        {
+             pzp = gridpressureB[indexZp];
+        }
 
+        float divg =
+            (dxm
+                +  dym
+                +  dzm - fmaxf(GridCounter[index] - density, 0)) / tsize;
+        */
 
         gridpressureA[index] = (pxm+pxp+pym+pyp+pzm+pzp - divg)/ 6;
         
@@ -263,16 +317,7 @@ __global__ void TransferToGrid(unsigned int partcount, float3* pos, float3* vit,
         int gridindexZ = (int)(pos[index].z / tsize);
 
 
-        
-        if (pos[index].x < 0 || pos[index].x > (BoxIndice.x - 1)* tsize ||
-            pos[index].y < 0 || pos[index].y > (BoxIndice.y - 1)* tsize ||
-            pos[index].z < 0 || pos[index].z > (BoxIndice.z - 1)* tsize)
-        {
-            //printf("particule number %d out of bound with indice : %d %d %d\n", index, gridindexX, gridindexY, gridindexZ);
-        }
-        else
-        {
-            ///vit[index] = make_float3(1, 1, 1); test purpose only
+                    ///vit[index] = make_float3(1, 1, 1); test purpose only
             //printf("la case %d \n", gridind);
 
             float centerposX = gridindexX * tsize;
@@ -319,7 +364,7 @@ __global__ void TransferToGrid(unsigned int partcount, float3* pos, float3* vit,
                 printf("atomic test %f , %f \n", vit[index].y, gridcounter[gridind]);
             }*/
 
-        }
+        
         //printf("indice de la particule dans la grille %d %d \n ",index, getGridInd(gridindexX, gridindexY, gridindexZ, BoxIndice));
 
         //pos[index] = make_float3(3, 3, 3);s
@@ -345,14 +390,6 @@ __global__ void TransfertToParticule(unsigned int partcount, float3* pos, float3
         int gridindexY = (int)(pos[index].y / tsize);
         int gridindexZ = (int)(pos[index].z / tsize);
 
-        if (pos[index].x < 0 || pos[index].x >(BoxIndice.x - 1)* tsize ||
-            pos[index].y < 0 || pos[index].y >(BoxIndice.y - 1) * tsize ||
-            pos[index].z < 0 || pos[index].z >(BoxIndice.z - 1) * tsize)
-        {
-            //printf("particule number %d out of bound with indice : %d %d %d\n", index, gridindexX, gridindexY, gridindexZ);
-        }
-        else
-        {
             //printf("la case %d \n", gridind);
 
             float centerposX = gridindexX * tsize;
@@ -389,7 +426,7 @@ __global__ void TransfertToParticule(unsigned int partcount, float3* pos, float3
             */
             //printf("la vitesse de la particule %d est %f %f %f \n", index, vit[index].x, vit[index].y, vit[index].z);
 
-        }
+        
 
         //printf("indice de la particule dans la grille %d %d \n ",index, getGridInd(gridindexX, gridindexY, gridindexZ, BoxIndice));
 
@@ -408,51 +445,84 @@ __global__ void EulerIntegration(unsigned int partcount, float3* pos, float3* vi
     for (unsigned int i = index; i < partcount; i += stride)
     {
 
-        pos[index].x += fminf(vit[index].x * tstep,tsize) ;
-        pos[index].y += fminf(vit[index].y * tstep, tsize) ;
-        pos[index].z += fminf(vit[index].z * tstep, tsize) ;
+        pos[index].x += vit[index].x * tstep ;
+        pos[index].y +=vit[index].y * tstep ;
+        pos[index].z += vit[index].z * tstep ;
 
         if (pos[index].x < tsize)
         {
             pos[index].x = tsize * 1.01;
+            vit[index].x = 0;
         }
         if (pos[index].x > boxsize.x - tsize)
         {
-            pos[index].x = boxsize.x - tsize * 1.02;
+            pos[index].x = boxsize.x - tsize * 1.01;
+            vit[index].x = 0;
         }
 
         if (pos[index].y < tsize)
         {
             pos[index].y = tsize * 1.01;
+            vit[index].y = 0;
         }
         if (pos[index].y > boxsize.y - tsize)
         {
-            pos[index].y = boxsize.y - tsize * 1.02;
+            pos[index].y = boxsize.y - tsize * 1.01;
+            vit[index].y = 0;
         }
 
         if (pos[index].z < tsize)
         {
             pos[index].z = tsize * 1.01;
+            vit[index].z = 0;
         }
         if (pos[index].z > boxsize.z - tsize)
         {
-            pos[index].z = boxsize.z - tsize * 1.02;
+            pos[index].z = boxsize.z - tsize * 1.01;
+            vit[index].z = 0;
         }
     }
 }
 
+__global__ void checking(uint3 boxind, float3* gridspeed,unsigned int* type )
+{
+    unsigned int index = getGridInd(blockIdx.x, blockIdx.y, blockIdx.z, boxind);
+    if (blockIdx.y == 0)
+    {
+
+        //printf("vitesse %f \n", gridspeed[index].y);
+        //printf("type %d \n", type[index]);
+    }
+
+}
+
 extern "C"
-void eulercompute(FlipSim * partEngine)
+void eulercompute(FlipSim * flipEngine)
 {
     EulerIntegration << <1000, 1024 >> > (
-        partEngine->PartCount,
-        partEngine->Partpos,
-        partEngine->Partvit,
-        partEngine->TimeStep,
-        partEngine->BoxSize,
-        partEngine->tileSize);
+        flipEngine->PartCount,
+        flipEngine->Partpos,
+        flipEngine->Partvit,
+        flipEngine->TimeStep,
+        flipEngine->BoxSize,
+        flipEngine->tileSize);
 
     getLastCudaError("Kernel execution failed: EulerIntegration");
+
+    uint3 box = flipEngine->BoxIndice;
+
+    dim3 numblocks(box.x, box.y, box.z);
+
+    checking << <numblocks, 1 >> > (
+        box,
+        flipEngine->GridSpeed,
+        flipEngine->type);
+
+    getLastCudaError("Kernel execution failed: checker");
+
+
+
+
 }
 // -------------------------------------------------------------------------------------------
 extern "C"
@@ -499,11 +569,17 @@ void addforces( FlipSim * flipEngine)
 
     getLastCudaError("Kernel execution failed: addforces_k");
 
+    
     boundariescondition << <numblocks, 1 >> > (
         box,
-        flipEngine->GridSpeed);
+        flipEngine->GridSpeed,
+        flipEngine->type);
 
     getLastCudaError("Kernel execution failed: boundariescondition");
+
+    
+
+
 
 }
 
