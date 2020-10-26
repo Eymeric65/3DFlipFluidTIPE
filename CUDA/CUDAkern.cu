@@ -97,23 +97,23 @@ __global__ void boundariescondition(uint3 boxind, float3* gridspeed)
 {
     unsigned int index = getGridInd(blockIdx.x, blockIdx.y, blockIdx.z, boxind);
 
-    if (blockIdx.x == 0 || blockIdx.x == (boxind.x - 2))
+    if (blockIdx.x == 0 || blockIdx.x >= (boxind.x - 2))
     {
         gridspeed[index].x = 0;
     }
 
-    if (blockIdx.y == 0 || blockIdx.y == (boxind.y - 2))
+    if (blockIdx.y == 0 || blockIdx.y >= (boxind.y - 2))
     {
         gridspeed[index].y = 0;
     }
 
-    if (blockIdx.z == 0 || blockIdx.z == (boxind.z - 2))
+    if (blockIdx.z == 0 || blockIdx.z >= (boxind.z - 2))
     {
         gridspeed[index].z = 0;
     }
 }
 
-__global__ void addpressure_k(uint3 boxind, float3* gridspeed, float* gridpressure, unsigned int* type, float density,float tsize)
+__global__ void addpressure_k(uint3 boxind, float3* gridspeed, float* gridpressure, unsigned int* type, float tsize)
 {
    unsigned int index = getGridInd(blockIdx.x, blockIdx.y, blockIdx.z, boxind);
 
@@ -131,12 +131,30 @@ __global__ void addpressure_k(uint3 boxind, float3* gridspeed, float* gridpressu
        unsigned int indexZm = index - 1;
        unsigned int indexZp = index + 1;
 
-       gridspeed[index].x -= (gridpressure[indexXp]- gridpressure[index])/ tsize;
-       gridspeed[index].y -= (gridpressure[indexYp] - gridpressure[index]) / tsize;
-       gridspeed[index].z -= (gridpressure[indexZp] - gridpressure[index]) /tsize;
+       
+       if (blockIdx.x + 1 != boxind.x - 1)
+       {
+           gridspeed[index].x -= (gridpressure[indexXp] - gridpressure[index]) / tsize;
+       }
 
-       float divg = (gridspeed[index].x - gridspeed[indexXm].x + gridspeed[index].y - gridspeed[indexYm].y + gridspeed[index].z - gridspeed[indexZm].z) / tsize;
-       if (abs(divg)>1) { printf("la divergence est de : %f \n", divg); }
+       if (blockIdx.y + 1 != boxind.y - 1)
+       {
+           gridspeed[index].y -= (gridpressure[indexYp] - gridpressure[index]) / tsize;
+       }
+
+       if (blockIdx.z + 1 != boxind.z - 1)
+       {
+           gridspeed[index].z -= (gridpressure[indexZp] - gridpressure[index]) / tsize;
+       }
+       
+
+       /*
+       gridspeed[index].x -= (gridpressure[indexXp] - gridpressure[index]) / tsize;
+       gridspeed[index].y -= (gridpressure[indexYp] - gridpressure[index]) / tsize;
+       gridspeed[index].z -= (gridpressure[indexZp] - gridpressure[index]) / tsize;
+       */
+       //float divg = (gridspeed[index].x - gridspeed[indexXm].x + gridspeed[index].y - gridspeed[indexYm].y + gridspeed[index].z - gridspeed[indexZm].z) / tsize;
+       //if (abs(divg)>1) { printf("la divergence est de : %f \n", divg); }
    }
 
 }
@@ -161,7 +179,10 @@ __global__ void JacobiIterationForPressure(uint3 boxind, float3* gridspeed,float
         unsigned int indexZm = index - 1;
         unsigned int indexZp = index + 1;
 
-        float divg = ( gridspeed[index].x - gridspeed[indexXm].x + gridspeed[index].y - gridspeed[indexYm].y + gridspeed[index].z - gridspeed[indexZm].z)/tsize  ;
+        float divg =
+            ( gridspeed[index].x - gridspeed[indexXm].x 
+            + gridspeed[index].y - gridspeed[indexYm].y 
+            + gridspeed[index].z - gridspeed[indexZm].z - fmaxf(GridCounter[index] - density, 0)) / tsize;
 
         float pxm = 0;
         if (blockIdx.x - 1 != 0)
@@ -208,7 +229,7 @@ __global__ void JacobiIterationForPressure(uint3 boxind, float3* gridspeed,float
 
 
 
-        gridpressureA[index] = (pxm+pxp+pym+pyp+pzm+pzp - divg)/ boundCounter;
+        gridpressureA[index] = (pxm+pxp+pym+pyp+pzm+pzp - divg)/ 6;
         
 
 
@@ -258,20 +279,40 @@ __global__ void TransferToGrid(unsigned int partcount, float3* pos, float3* vit,
             float centerposY = gridindexY * tsize;
             float centerposZ = gridindexZ * tsize;
 
-            unsigned int gridindX = getGridInd(gridindexX + staggeredGrid(centerposX, pos[index].x), gridindexY, gridindexZ, BoxIndice);
-            unsigned int gridindY = getGridInd(gridindexX, gridindexY + staggeredGrid(centerposY, pos[index].y), gridindexZ, BoxIndice);
-            unsigned int gridindZ = getGridInd(gridindexX, gridindexY, gridindexZ + staggeredGrid(centerposZ, pos[index].z), BoxIndice);
+            float stX = staggeredGrid(centerposX, pos[index].x);
+            float stY = staggeredGrid(centerposY, pos[index].y);
+            float stZ = staggeredGrid(centerposZ, pos[index].z);
+
+            unsigned int gridindX = getGridInd(gridindexX + stX, gridindexY, gridindexZ, BoxIndice);
+            unsigned int gridindY = getGridInd(gridindexX, gridindexY + stY, gridindexZ, BoxIndice);
+            unsigned int gridindZ = getGridInd(gridindexX, gridindexY, gridindexZ + stZ, BoxIndice);
+
+
+            unsigned int gridindXi = getGridInd(gridindexX - 1 - stX, gridindexY, gridindexZ, BoxIndice);
+            unsigned int gridindYi = getGridInd(gridindexX, gridindexY - 1 - stY, gridindexZ, BoxIndice);
+            unsigned int gridindZi = getGridInd(gridindexX, gridindexY, gridindexZ - 1 - stZ, BoxIndice);
+
+            float ax = fabsf((pos[index].x - centerposX) / 2 * tsize + 0.5);
+            float ay = fabsf((pos[index].y - centerposY) / 2 * tsize + 0.5);
+            float az = fabsf((pos[index].z - centerposZ) / 2 * tsize + 0.5);
 
             unsigned int gridind = getGridInd(gridindexX, gridindexY, gridindexZ, BoxIndice);
 
-            atomicAdd(&(gridspeed[gridindX].x), vit[index].x);
-            atomicAdd(&gridspeed[gridindY].y, vit[index].y);
-            atomicAdd(&gridspeed[gridindZ].z, vit[index].z);
+            atomicAdd(&gridspeed[gridindX].x, vit[index].x*ax);
+            atomicAdd(&gridspeed[gridindY].y, vit[index].y*ay);
+            atomicAdd(&gridspeed[gridindZ].z, vit[index].z*az);
 
+            atomicAdd(&gridspeed[gridindXi].x, vit[index].x * (1-ax));
+            atomicAdd(&gridspeed[gridindYi].y, vit[index].y * (1-ay));
+            atomicAdd(&gridspeed[gridindZi].z, vit[index].z * (1-az));
 
+            atomicAdd(&gridcounter[gridindX],  ax);
+            atomicAdd(&gridcounter[gridindY],  ay);
+            atomicAdd(&gridcounter[gridindZ],  az);
 
-            atomicAdd(&gridcounter[gridind], 1.0f);
-
+            atomicAdd(&gridcounter[gridindXi], (1 - ax));
+            atomicAdd(&gridcounter[gridindYi],  (1 - ay));
+            atomicAdd(&gridcounter[gridindZi],  (1 - az));
             /*
             if (index == 1999)
             {
@@ -312,21 +353,40 @@ __global__ void TransfertToParticule(unsigned int partcount, float3* pos, float3
         }
         else
         {
-
-
-
             //printf("la case %d \n", gridind);
 
             float centerposX = gridindexX * tsize;
             float centerposY = gridindexY * tsize;
             float centerposZ = gridindexZ * tsize;
 
-            unsigned int gridindX = getGridInd(gridindexX + staggeredGrid(centerposX, pos[index].x), gridindexY, gridindexZ, BoxIndice);
-            unsigned int gridindY = getGridInd(gridindexX, gridindexY + staggeredGrid(centerposY, pos[index].y), gridindexZ, BoxIndice);
-            unsigned int gridindZ = getGridInd(gridindexX, gridindexY, gridindexZ + staggeredGrid(centerposZ, pos[index].z), BoxIndice);
+            float stX = staggeredGrid(centerposX, pos[index].x);
+            float stY = staggeredGrid(centerposY, pos[index].y);
+            float stZ = staggeredGrid(centerposZ, pos[index].z);
 
-            vit[index] = make_float3(gridspeed[gridindX].x, gridspeed[gridindY].y, gridspeed[gridindZ].z); // direct assigmement
+            unsigned int gridindX = getGridInd(gridindexX + stX, gridindexY, gridindexZ, BoxIndice);
+            unsigned int gridindY = getGridInd(gridindexX, gridindexY + stY, gridindexZ, BoxIndice);
+            unsigned int gridindZ = getGridInd(gridindexX, gridindexY, gridindexZ + stZ, BoxIndice);
 
+            
+            unsigned int gridindXi = getGridInd(gridindexX - 1-stX, gridindexY, gridindexZ, BoxIndice);
+            unsigned int gridindYi = getGridInd(gridindexX, gridindexY -1-stY, gridindexZ, BoxIndice);
+            unsigned int gridindZi = getGridInd(gridindexX, gridindexY, gridindexZ -1- stZ, BoxIndice);
+            
+            float ax = fabsf((pos[index].x - centerposX)/2*tsize+0.5);
+            float ay = fabsf((pos[index].y - centerposY) / 2 * tsize+0.5);
+            float az = fabsf((pos[index].z - centerposZ) / 2 * tsize+0.5);
+
+
+            
+            vit[index] = make_float3(gridspeed[gridindX].x*ax + (1-ax)* gridspeed[gridindXi].x
+                , gridspeed[gridindY].y * ay + (1 - ay) * gridspeed[gridindYi].y
+                , gridspeed[gridindZ].z * az + (1 - az) * gridspeed[gridindZi].z); // direct assigmement
+            
+            /*
+            vit[index] = make_float3(gridspeed[gridindX].x 
+                , gridspeed[gridindY].y 
+                , gridspeed[gridindZ].z ); // direct assigmement
+            */
             //printf("la vitesse de la particule %d est %f %f %f \n", index, vit[index].x, vit[index].y, vit[index].z);
 
         }
@@ -347,35 +407,36 @@ __global__ void EulerIntegration(unsigned int partcount, float3* pos, float3* vi
     unsigned int stride = blockDim.x * gridDim.x;
     for (unsigned int i = index; i < partcount; i += stride)
     {
-        pos[index].x += vit[index].x * tstep;
-        pos[index].y += vit[index].y * tstep;
-        pos[index].z += vit[index].z * tstep;
+
+        pos[index].x += fminf(vit[index].x * tstep,tsize) ;
+        pos[index].y += fminf(vit[index].y * tstep, tsize) ;
+        pos[index].z += fminf(vit[index].z * tstep, tsize) ;
 
         if (pos[index].x < tsize)
         {
-            pos[index].x = tsize * 1.1;
+            pos[index].x = tsize * 1.01;
         }
         if (pos[index].x > boxsize.x - tsize)
         {
-            pos[index].x = boxsize.x - tsize * 1.1;
+            pos[index].x = boxsize.x - tsize * 1.02;
         }
 
         if (pos[index].y < tsize)
         {
-            pos[index].y = tsize * 1.1;
+            pos[index].y = tsize * 1.01;
         }
         if (pos[index].y > boxsize.y - tsize)
         {
-            pos[index].y = boxsize.y - tsize * 1.1;
+            pos[index].y = boxsize.y - tsize * 1.02;
         }
 
         if (pos[index].z < tsize)
         {
-            pos[index].z = tsize * 1.1;
+            pos[index].z = tsize * 1.01;
         }
         if (pos[index].z > boxsize.z - tsize)
         {
-            pos[index].z = boxsize.z - tsize * 1.1;
+            pos[index].z = boxsize.z - tsize * 1.02;
         }
     }
 }
@@ -390,6 +451,8 @@ void eulercompute(FlipSim * partEngine)
         partEngine->TimeStep,
         partEngine->BoxSize,
         partEngine->tileSize);
+
+    getLastCudaError("Kernel execution failed: EulerIntegration");
 }
 // -------------------------------------------------------------------------------------------
 extern "C"
@@ -397,7 +460,7 @@ void TrToGr( FlipSim * flipEngine)
 {
     //std::cout <<"nombre de particule "<< partEngine->PartCount << std::endl;
 
-    TransferToGrid << <1000, 1024 >> > (
+    TransferToGrid << <200, 512 >> > (
         flipEngine->PartCount,
         flipEngine->Partpos,
         flipEngine->Partvit,
@@ -405,6 +468,8 @@ void TrToGr( FlipSim * flipEngine)
         flipEngine->GridWeight,
         flipEngine->tileSize,
         flipEngine->BoxIndice);
+
+    getLastCudaError("Kernel execution failed: TransferToGrid");
 
     uint3 box = flipEngine->BoxIndice;
     
@@ -415,6 +480,8 @@ void TrToGr( FlipSim * flipEngine)
         flipEngine->GridSpeed,
         flipEngine->GridWeight,
         flipEngine->type);
+
+    getLastCudaError("Kernel execution failed: gridnormal");
 }
 
 extern "C"
@@ -430,16 +497,20 @@ void addforces( FlipSim * flipEngine)
         flipEngine->type,
         flipEngine->TimeStep);
 
+    getLastCudaError("Kernel execution failed: addforces_k");
+
     boundariescondition << <numblocks, 1 >> > (
         box,
         flipEngine->GridSpeed);
+
+    getLastCudaError("Kernel execution failed: boundariescondition");
 
 }
 
 extern "C"
 void TrToPr(FlipSim * flipEngine)
 {
-    TransfertToParticule << <1000, 1024 >> > (
+    TransfertToParticule << <200, 512 >> > (
         flipEngine->PartCount,
         flipEngine->Partpos,
         flipEngine->Partvit,
@@ -447,6 +518,8 @@ void TrToPr(FlipSim * flipEngine)
         flipEngine->GridWeight,
         flipEngine->tileSize,
         flipEngine->BoxIndice);
+
+    getLastCudaError("Kernel execution failed: TransfertToParticule");
 
 }
 
@@ -470,14 +543,17 @@ void JacobiIter( FlipSim * flipEngine, unsigned int stepNb)
             flipEngine->GridPressureA,
             flipEngine->type,
             flipEngine->tileSize,
-            10,
+            8.0,
             flipEngine->GridWeight);
+
+        getLastCudaError("Kernel execution failed: JacobiIterationForPressure");
             
         PressureCopy<<<numblocks,1>>>(
             box, 
             flipEngine->GridPressureB, 
             flipEngine->GridPressureA);
 
+        getLastCudaError("Kernel execution failed: PressureCopy");
     }
 
 }
@@ -493,8 +569,9 @@ void AddPressureForce(FlipSim * flipEngine)
         box,
         flipEngine->GridSpeed, 
         flipEngine->GridPressureA, 
-        flipEngine->type, 1, 
+        flipEngine->type,
         flipEngine->tileSize);
 
+    getLastCudaError("Kernel execution failed: addpressure_k");
 
 }

@@ -103,11 +103,11 @@ int main()
 
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 20; x += 1)
+    for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 20; y += 1)
+        for (int y = 0; y < 30; y += 1)
         {
-            for (int z = 0; z < 20; z += 1)
+            for (int z = 0; z < 30; z += 1)
             {
                 glm::vec3 translation;
                 translation.x = (float)x / 2.0f + 1.5f;
@@ -122,18 +122,9 @@ int main()
 
     const int PartCount = position.size();
 
-    //ParticleSystem PartEngine(PartCount,0.0002);
-
-    //std::cout << "il y a " << PartEngine.PartCount << " particules" << std::endl;
 
     FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartCount,0.1);
 
-    ///std::cout << "il y a " << FlipEngine.partLink->PartCount << " particules (mais vu au travers de flipengine)" << std::endl;
-
-    //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
-
-    ///PartEngine.Boxsize = FlipEngine.BoxSize;
-    ///PartEngine.tilesize = FlipEngine.tileSize;
 
     GLuint particles_position_buffer;
     glGenBuffers(1, &particles_position_buffer);
@@ -192,12 +183,7 @@ int main()
 
     int FPSlimiter = 0;
 
-    //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
-
     FlipEngine.StartCompute();
-    ///FlipEngine.partLink = &PartEngine; // ce bug de merde 
-
-    //std::cout << "test de ressemblance " << (PartEngine.Partpos == FlipEngine.partLink->Partpos) << std::endl;
 
     FlipEngine.TransferToGrid();
 
@@ -206,8 +192,6 @@ int main()
     FlipEngine.TransferToParticule();
 
     FlipEngine.EndCompute();
-
-    ///std::cout << PartEngine.Boxsize.x << std::endl;
 
     // render loop
     // -----------
@@ -277,9 +261,9 @@ int main()
         int lightPos = glGetUniformLocation(firstshader.ID, "lightPos");
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
-        // partie a commenter si il faut desactiver le render
+        
+
         FlipEngine.StartCompute();
-        ///FlipEngine.partLink = &PartEngine; // ce bug de merde 
 
         FlipEngine.TransferToGrid();
         
@@ -294,6 +278,8 @@ int main()
         FlipEngine.Compute();
 
         FlipEngine.EndCompute();
+
+        
         //--------------------------------------------------------------------------------
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
