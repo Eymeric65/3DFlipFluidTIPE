@@ -341,8 +341,6 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 	if (type[index] == 2)
 	{
 
-		
-
 		float div =
 			(MACgridSpeed[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z, MACbox)].x +
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y+1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x , blockIdx.y , blockIdx.z, MACbox)].y +
