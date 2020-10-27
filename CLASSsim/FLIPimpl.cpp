@@ -2,22 +2,20 @@
 #include <assert.h>
 #include <iostream>
 
-/*
-extern "C" void TrToGr( FlipSim * flipEngine);
 
-extern "C" void addforces( FlipSim * flipEngine);
-
-extern "C" void TrToPr( FlipSim * flipEngine);
-
-extern "C" void JacobiIter(FlipSim * flipEngine,unsigned int stepNb);
-
-extern "C" void AddPressureForce(FlipSim * flipEngine);
-
-extern "C" void eulercompute(FlipSim * flipEngine);
-*/
 extern "C" void TransfertToGridV2(FlipSim * flipEngine);
 
 extern "C" void TransfertToPartV2(FlipSim * flipEngine);
+
+extern "C" void AddExternalForcesV2(FlipSim * flipEngine);
+
+extern "C" void EulerIntegrateV2(FlipSim * flipEngine);
+
+extern "C" void BoundariesConditionV2(FlipSim * flipEngine);
+
+extern "C" void JacobiIterV2(FlipSim * flipEngine, int step);
+
+extern "C" void AddPressureV2(FlipSim * flipEngine);
 
 FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned int partcount,float tstep)
 {
@@ -97,18 +95,20 @@ void FlipSim::TransferToParticule()
 
 void FlipSim::AddExternalForces()
 {
-
+	AddExternalForcesV2(this);
 }
 
 void FlipSim::PressureCompute()
 {
 	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float));
 
+	JacobiIterV2(this, 50);
+
 }
 
 void FlipSim::AddPressure()
 {
-
+	AddPressureV2(this);
 }
 
 void FlipSim::endSim()
@@ -135,9 +135,9 @@ void FlipSim::linkPos(GLuint buffer)
 	cudaGraphicsGLRegisterBuffer(&cuda_pos_resource, buffer, cudaGraphicsRegisterFlagsNone);
 }
 
-void FlipSim::Compute()
+void FlipSim::Integrate()
 {
-
+	EulerIntegrateV2(this);
 }
 
 void FlipSim::EndCompute()
@@ -146,4 +146,9 @@ void FlipSim::EndCompute()
 
 	//std::cout << "la taille est " << vit[0].x << std::endl;
 
+}
+
+void FlipSim::Boundaries()
+{
+	BoundariesConditionV2(this);
 }

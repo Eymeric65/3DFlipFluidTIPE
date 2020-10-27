@@ -26,7 +26,7 @@ public:
 	float3* MACGridSpeed;
 	float3* MACGridWeight;
 
-	unsigned int* type; // 0 is solid 1 is fluid 2 is air
+	unsigned int* type; // 0 is air 1 is solid 2 is fluid
 
 	float* GridPressureB;
 	float* GridPressureA;
@@ -49,19 +49,28 @@ public:
 
 	void AddExternalForces();
 
-	void PressureCompute();
-
-	void AddPressure();
-
-	void endSim();
+	void Integrate(); //euler
 
 	void StartCompute();
-
-	void Compute();
 
 	void EndCompute();
 
 	void linkPos(GLuint buffer);
+
+	void Boundaries();
+
+	void PressureCompute();
+
+	void AddPressure();
+
+	//a faire
+	
+
+	
+
+	void endSim();
+
+
 
 
 };

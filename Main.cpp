@@ -25,7 +25,7 @@
 
 //#include<sphere.cpp>
 
-
+//#define ONESTEPSIM
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -110,9 +110,9 @@ int main()
             for (int z = 0; z < 20; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 2.0f + 5.f;
-                translation.y = (float)y / 2.0f +5.f;
-                translation.z = (float)z / 2.0f + 5.f;
+                translation.x = (float)x / 2.0f + 0.5f;
+                translation.y = (float)y / 2.0f +2.f;
+                translation.z = (float)z / 2.0f + 0.5f;
 
                 position.push_back(translation);
 
@@ -123,7 +123,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(40.0, 30.0, 30.0, 1.0, PartCount,0.05);
+    FlipSim FlipEngine(40.0, 30.0, 30.0, 1.0, PartCount,0.005);
 
 
     GLuint particles_position_buffer;
@@ -187,9 +187,11 @@ int main()
 
     FlipEngine.TransferToGrid();
 
-    //FlipEngine.AddExternalForces();
+    FlipEngine.AddExternalForces();
 
     FlipEngine.TransferToParticule();
+
+    FlipEngine.Integrate();
 
     FlipEngine.EndCompute();
     
@@ -262,16 +264,26 @@ int main()
         int lightPos = glGetUniformLocation(firstshader.ID, "lightPos");
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
+#ifdef ONESTEPSIM
+#else
         
         FlipEngine.StartCompute();
 
         FlipEngine.TransferToGrid();
 
-        //FlipEngine.AddExternalForces();
+
+        FlipEngine.AddExternalForces();
+        
+
+        FlipEngine.Boundaries();
 
         FlipEngine.TransferToParticule();
 
+        FlipEngine.Integrate();
+
         FlipEngine.EndCompute();
+
+#endif
         
         //--------------------------------------------------------------------------------
 
