@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <iostream>
 
-
+/*
 extern "C" void TrToGr( FlipSim * flipEngine);
 
 extern "C" void addforces( FlipSim * flipEngine);
@@ -11,10 +11,13 @@ extern "C" void TrToPr( FlipSim * flipEngine);
 
 extern "C" void JacobiIter(FlipSim * flipEngine,unsigned int stepNb);
 
-
 extern "C" void AddPressureForce(FlipSim * flipEngine);
 
 extern "C" void eulercompute(FlipSim * flipEngine);
+*/
+extern "C" void TransfertToGridV2(FlipSim * flipEngine);
+
+extern "C" void TransfertToPartV2(FlipSim * flipEngine);
 
 FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned int partcount,float tstep)
 {
@@ -32,8 +35,6 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 
 	tileSize = tsize;
 
-
-
 	BoxIndice = make_uint3((int)(BoxSize.x / tileSize),
 							(int)(BoxSize.y/ tileSize),
 							(int)(BoxSize.z / tileSize)  );
@@ -44,21 +45,29 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 			((BoxSize.z / tileSize) == BoxIndice.z)
 			);
 
+	MACBoxIndice = make_uint3((int)(BoxSize.x / tileSize)+1,
+		(int)(BoxSize.y / tileSize)+1,
+		(int)(BoxSize.z / tileSize)+1);
+
 
 	IndiceCount = BoxIndice.x * BoxIndice.y * BoxIndice.z;
+
+	MACIndiceCount = (BoxIndice.x +1)* (BoxIndice.y+1) *( BoxIndice.z+1);
 
 	printf("il y a %d cases \n",IndiceCount);
 
 	printf("la boite possède (%d;%d;%d)cases \n", BoxIndice.x, BoxIndice.y, BoxIndice.z);
 
+	printf("il y a %d particules \n", PartCount);
+
 	cudaMalloc(&Partvit, PartCount * sizeof(float3));
 	cudaMemset(Partvit, 0, PartCount * sizeof(float3));
 
-	cudaMalloc(&GridSpeed, IndiceCount * sizeof(float3));
-	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
+	cudaMalloc(&MACGridSpeed, (MACIndiceCount) * sizeof(float3));
+	cudaMemset(MACGridSpeed, 0, (MACIndiceCount) * sizeof(float3));
 
-	cudaMalloc(&GridWeight, IndiceCount * sizeof(float));
-	cudaMemset(GridWeight, 0, IndiceCount * sizeof(float));
+	cudaMalloc(&MACGridWeight, MACIndiceCount * sizeof(float3));
+	cudaMemset(MACGridWeight, 0, MACIndiceCount * sizeof(float3));
 
 	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float3));
 	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float3));
@@ -73,36 +82,39 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 
 void FlipSim::TransferToGrid()
 {
-	cudaMemset(GridWeight, 0, IndiceCount * sizeof(float));
-	cudaMemset(GridSpeed, 0, IndiceCount * sizeof(float3));
-	TrToGr(this);
+	cudaMemset(MACGridWeight, 0, MACIndiceCount * sizeof(float3));
+	cudaMemset(MACGridSpeed, 0, MACIndiceCount * sizeof(float3));
+
+	//std::cout << " coucou " << std::endl;
+
+	TransfertToGridV2(this);
 }
 
 void FlipSim::TransferToParticule()
 {
-	TrToPr(this);
+	TransfertToPartV2(this);
 }
 
 void FlipSim::AddExternalForces()
 {
-	addforces( this);
+
 }
 
 void FlipSim::PressureCompute()
 {
 	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float));
-	JacobiIter(this, 50);
+
 }
 
 void FlipSim::AddPressure()
 {
-	AddPressureForce(this);
+
 }
 
 void FlipSim::endSim()
 {
-	cudaFree(GridSpeed);
-	cudaFree(GridWeight);
+	cudaFree(MACGridSpeed);
+	cudaFree(MACGridWeight);
 	cudaFree(type);
 	cudaFree(GridPressureB);
 	cudaFree(GridPressureA);
@@ -125,7 +137,7 @@ void FlipSim::linkPos(GLuint buffer)
 
 void FlipSim::Compute()
 {
-	eulercompute(this);
+
 }
 
 void FlipSim::EndCompute()

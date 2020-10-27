@@ -105,14 +105,14 @@ int main()
     float offset = 0.0f;
     for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 30; y += 1)
+        for (int y = 0; y < 20; y += 1)
         {
-            for (int z = 0; z < 30; z += 1)
+            for (int z = 0; z < 20; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 2.0f + 1.5f;
-                translation.y = (float)y / 2.0f + 1.5f;
-                translation.z = (float)z / 2.0f + 1.5f;
+                translation.x = (float)x / 2.0f + 5.f;
+                translation.y = (float)y / 2.0f +5.f;
+                translation.z = (float)z / 2.0f + 5.f;
 
                 position.push_back(translation);
 
@@ -123,7 +123,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartCount,0.05);
+    FlipSim FlipEngine(40.0, 30.0, 30.0, 1.0, PartCount,0.05);
 
 
     GLuint particles_position_buffer;
@@ -182,16 +182,17 @@ int main()
 
 
     int FPSlimiter = 0;
-
+    
     FlipEngine.StartCompute();
 
     FlipEngine.TransferToGrid();
 
-    FlipEngine.AddExternalForces();
+    //FlipEngine.AddExternalForces();
 
     FlipEngine.TransferToParticule();
 
     FlipEngine.EndCompute();
+    
 
     // render loop
     // -----------
@@ -262,23 +263,15 @@ int main()
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
         
-
         FlipEngine.StartCompute();
 
         FlipEngine.TransferToGrid();
-        
-        FlipEngine.AddExternalForces();
 
-        FlipEngine.PressureCompute();
-
-        FlipEngine.AddPressure();
+        //FlipEngine.AddExternalForces();
 
         FlipEngine.TransferToParticule();
 
-        FlipEngine.Compute();
-
         FlipEngine.EndCompute();
-
         
         //--------------------------------------------------------------------------------
 

@@ -47,5 +47,8 @@
     <CudaCompile Include="CUDA\CUDAkern.cu">
       <Filter>CUDA</Filter>
     </CudaCompile>
+    <CudaCompile Include="CUDA\CUDAkernv2.cu">
+      <Filter>CUDA</Filter>
+    </CudaCompile>
   </ItemGroup>
 </Project>
