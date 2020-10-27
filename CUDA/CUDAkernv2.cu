@@ -10,7 +10,7 @@
 
 #define CFL_FORCED
 
-//#define BOUNDARY_WALL_ONLY
+#define BOUNDARY_WALL_ONLY
 
 __device__ unsigned int gind(unsigned int indiceX, unsigned int indiceY, unsigned int indiceZ, uint3 BoxIndice)
 {
@@ -142,10 +142,18 @@ __global__ void GridNormalV2_k(uint3 MACbox,float3* MACgridSpeed, float3* MACwei
 __global__ void GridNormalV2_k(uint3 MACbox, float3* MACgridSpeed, float3* MACweight)
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox);
-
-	MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
-	MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
-	MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
+	if (MACweight[index].x != 0)
+	{
+		MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
+	}
+	if (MACweight[index].y != 0)
+	{
+		MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
+	}
+	if (MACweight[index].z != 0)
+	{
+		MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
+	}
 
 }
 #endif
@@ -239,9 +247,9 @@ __global__ void euler_k(int partCount,float3* Ppos,float3* Pvit,float tstep,floa
 
 #ifdef CFL_FORCED
 
-		Ppos[index].x += absmin(Pvit[index].x * tstep, tsize*0.99);
-		Ppos[index].y += absmin(Pvit[index].y * tstep, tsize*0.99);
-		Ppos[index].z += absmin(Pvit[index].z * tstep, tsize*0.99);
+		Ppos[index].x += absmin(Pvit[index].x * tstep, tsize*0.95);
+		Ppos[index].y += absmin(Pvit[index].y * tstep, tsize*0.95);
+		Ppos[index].z += absmin(Pvit[index].z * tstep, tsize*0.95);
 
 		//printf("hmm %f \n", absmin(Pvit[index].y * tstep, tsize * 0.98));
 
@@ -333,10 +341,12 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 	if (type[index] == 2)
 	{
 
+		
+
 		float div =
-			(MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x +
-			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x , blockIdx.y + 1, blockIdx.z, MACbox)].y +
-			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z - MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z + 1, MACbox)].z )
+			(MACgridSpeed[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z, MACbox)].x +
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y+1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x , blockIdx.y , blockIdx.z, MACbox)].y +
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z+1, MACbox)].z - MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z , MACbox)].z )
 			/tsize;
 
 		gridPressureA[index] =
@@ -346,6 +356,8 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 				gridPressureB[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, box)] +
 				gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z - 1, box)] +
 				gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, box)] - div) / 6;
+
+		//printf("test %f %d %d %d \n ", div,  blockIdx.x, blockIdx.y, blockIdx.z);
 
 	}
 
@@ -357,6 +369,8 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 
 	if (type[index] == 2)
 	{
+		
+
 		if (type[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box) != 1])
 		{
 			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x -=
@@ -393,6 +407,14 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z -=
 				(gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z , box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z-1, box)]) / tsize;
 		}
+
+		float div =
+			(MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x +
+				MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y +
+				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
+			/ tsize;
+
+		//printf("la divergence %f \n", div);
 
 	}
 }
@@ -548,10 +570,10 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 			flipEngine->MACGridSpeed,
 			flipEngine->GridPressureA,
 			flipEngine->GridPressureB,
-			flipEngine-> type,
+			flipEngine->type,
 			flipEngine->tileSize);
 
-
+		getLastCudaError("Kernel execution failed: jacobi_iter_k");
 
 		pressure_copy_k<<<mat,1>>>(
 			box,

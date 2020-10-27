@@ -67,10 +67,10 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 	cudaMalloc(&MACGridWeight, MACIndiceCount * sizeof(float3));
 	cudaMemset(MACGridWeight, 0, MACIndiceCount * sizeof(float3));
 
-	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float3));
-	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float3));
+	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float));
+	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float));
 
-	cudaMalloc(&GridPressureA, IndiceCount * sizeof(float3));
+	cudaMalloc(&GridPressureA, IndiceCount * sizeof(float));
 
 	cudaMalloc(&type, IndiceCount * sizeof(unsigned int));
 
