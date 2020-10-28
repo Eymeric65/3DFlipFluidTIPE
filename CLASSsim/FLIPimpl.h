@@ -31,6 +31,8 @@ public:
 	float* GridPressureB;
 	float* GridPressureA;
 
+	float* GridDiv;
+
 	int PartCount;
 
 	float3* Partpos;

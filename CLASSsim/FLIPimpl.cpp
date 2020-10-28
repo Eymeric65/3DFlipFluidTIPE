@@ -74,6 +74,8 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 
 	cudaMalloc(&type, IndiceCount * sizeof(unsigned int));
 
+	cudaMalloc(&GridDiv, IndiceCount * sizeof(float));
+
 
 
 }
