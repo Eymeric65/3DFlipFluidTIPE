@@ -103,16 +103,16 @@ int main()
 
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 20; x += 1)
+    for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 20; y += 1)
+        for (int y = 0; y < 35; y += 1)
         {
-            for (int z = 0; z < 20; z += 1)
+            for (int z = 0; z < 40; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 2.0f + 1.5f;
-                translation.y = (float)y / 2.0f +1.5f;
-                translation.z = (float)z / 2.0f + 1.5f;
+                translation.x = (float)x / 2.0f + 1.f;
+                translation.y = (float)y / 2.0f +1.f;
+                translation.z = (float)z / 2.0f + 1.f;
 
                 position.push_back(translation);
 
@@ -123,7 +123,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartCount,0.01);
+    FlipSim FlipEngine(42.0, 22.0, 22.0, 1.0, PartCount,0.03);
 
 
     GLuint particles_position_buffer;
@@ -187,13 +187,13 @@ int main()
 
     FlipEngine.TransferToGrid();
 
-    FlipEngine.AddExternalForces();
+    //FlipEngine.AddExternalForces();
 
-    FlipEngine.Boundaries();
+    //FlipEngine.Boundaries();
 
-    FlipEngine.PressureCompute();
+    //FlipEngine.PressureCompute();
 
-    FlipEngine.AddPressure();
+    //FlipEngine.AddPressure();
 
     FlipEngine.TransferToParticule();
 

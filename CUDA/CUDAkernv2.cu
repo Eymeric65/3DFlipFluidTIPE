@@ -8,14 +8,40 @@
 //#define D_VIT
 //#define D_TYPE
 
+//#define D_DIV
+
 #define CFL_FORCED
 
+#define FLIPNESS 0.95
+
+#define RK2
 #define BOUNDARY_WALL_ONLY
+
+
 
 __device__ unsigned int gind(unsigned int indiceX, unsigned int indiceY, unsigned int indiceZ, uint3 BoxIndice)
 {
 	return indiceZ + indiceY * BoxIndice.z + indiceX * BoxIndice.z * BoxIndice.y;
 }
+
+__device__ float3 interpolate(float3 pos,uint3 box,float3* gridSpeed,float tsize)
+{
+	unsigned int XGridI = (int)(pos.x / tsize) ;
+	unsigned int YGridI = (int)(pos.y / tsize) ;
+	unsigned int ZGridI = (int)(pos.z / tsize) ;
+
+
+	float ax = pos.x / tsize - XGridI ;
+	float ay = pos.y / tsize - YGridI ;
+	float az = pos.z / tsize - ZGridI ;
+
+	float xvit = (ax)*gridSpeed[gind(XGridI+1, YGridI, ZGridI, box)].x + (1 - ax) * gridSpeed[gind(XGridI , YGridI, ZGridI, box)].x;
+	float yvit = (ay)*gridSpeed[gind(XGridI, YGridI+1, ZGridI, box)].y + (1 - ay) * gridSpeed[gind(XGridI, YGridI, ZGridI, box)].y;
+	float zvit = (az)*gridSpeed[gind(XGridI, YGridI, ZGridI+1, box)].z + (1 - az) * gridSpeed[gind(XGridI, YGridI, ZGridI , box)].z;
+
+	return make_float3(xvit, yvit, zvit);
+}
+
 
 __device__ float absmin(float x, float limit)
 {
@@ -36,15 +62,15 @@ __global__ void TrToGrV2_k(uint3 MACbox,unsigned int partcount,float tsize,float
 	unsigned int stride = blockDim.x * gridDim.x;
 	for (unsigned int i = index; i < partcount; i += stride)
 	{
-		unsigned int XGridI = (int)(Ppos[index].x / tsize)+1;
-		unsigned int YGridI = (int)(Ppos[index].y / tsize)+1;
-		unsigned int ZGridI = (int)(Ppos[index].z / tsize)+1;
+		unsigned int XGridI = (int)(Ppos[index].x / tsize);
+		unsigned int YGridI = (int)(Ppos[index].y / tsize);
+		unsigned int ZGridI = (int)(Ppos[index].z / tsize);
 
 		//if (YGridI - 1 > 0) { printf("yes"); }
 
-		float ax = Ppos[index].x / tsize - XGridI +1;
-		float ay = Ppos[index].y / tsize - YGridI +1;
-		float az = Ppos[index].z / tsize - ZGridI +1;
+		float ax = Ppos[index].x / tsize - XGridI ;
+		float ay = Ppos[index].y / tsize - YGridI ;
+		float az = Ppos[index].z / tsize - ZGridI ;
 
 #ifdef DEBUG
 
@@ -59,21 +85,21 @@ __global__ void TrToGrV2_k(uint3 MACbox,unsigned int partcount,float tsize,float
 
 #endif
 
-		atomicAdd(&MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].x, (ax ) * Pvit[index].x);
-		atomicAdd(&MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].y, ( ay ) * Pvit[index].y);
-		atomicAdd(&MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].z,(az) * Pvit[index].z);
+		atomicAdd(&MACgridSpeed[gind(XGridI+1, YGridI, ZGridI, MACbox)].x, (ax ) * Pvit[index].x);
+		atomicAdd(&MACgridSpeed[gind(XGridI, YGridI+1, ZGridI, MACbox)].y, ( ay ) * Pvit[index].y);
+		atomicAdd(&MACgridSpeed[gind(XGridI, YGridI, ZGridI+1, MACbox)].z,(az) * Pvit[index].z);
 
-		atomicAdd(&MACweight[gind(XGridI, YGridI, ZGridI, MACbox)].x, ax);
-		atomicAdd(&MACweight[gind(XGridI, YGridI, ZGridI, MACbox)].y, ay);
-		atomicAdd(&MACweight[gind(XGridI, YGridI, ZGridI, MACbox)].z, az);
+		atomicAdd(&MACweight[gind(XGridI+1, YGridI, ZGridI, MACbox)].x, ax);
+		atomicAdd(&MACweight[gind(XGridI, YGridI+1, ZGridI, MACbox)].y, ay);
+		atomicAdd(&MACweight[gind(XGridI, YGridI, ZGridI+1, MACbox)].z, az);
 
-		atomicAdd(&MACgridSpeed[gind(XGridI-1, YGridI, ZGridI, MACbox)].x, (1-ax) * Pvit[index].x);
-		atomicAdd(&MACgridSpeed[gind(XGridI , YGridI-1, ZGridI, MACbox)].y, (1-ay) * Pvit[index].y);
-		atomicAdd(&MACgridSpeed[gind(XGridI , YGridI, ZGridI-1, MACbox)].z, (1-az) * Pvit[index].z);
+		atomicAdd(&MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].x, (1-ax) * Pvit[index].x);
+		atomicAdd(&MACgridSpeed[gind(XGridI , YGridI, ZGridI, MACbox)].y, (1-ay) * Pvit[index].y);
+		atomicAdd(&MACgridSpeed[gind(XGridI , YGridI, ZGridI, MACbox)].z, (1-az) * Pvit[index].z);
 
-		atomicAdd(&MACweight[gind(XGridI - 1, YGridI, ZGridI, MACbox)].x, (1 - ax) );
-		atomicAdd(&MACweight[gind(XGridI, YGridI - 1, ZGridI, MACbox)].y, (1 - ay) );
-		atomicAdd(&MACweight[gind(XGridI, YGridI, ZGridI - 1, MACbox)].z, (1 - az) );
+		atomicAdd(&MACweight[gind(XGridI , YGridI, ZGridI, MACbox)].x, (1 - ax) );
+		atomicAdd(&MACweight[gind(XGridI, YGridI , ZGridI, MACbox)].y, (1 - ay) );
+		atomicAdd(&MACweight[gind(XGridI, YGridI, ZGridI , MACbox)].z, (1 - az) );
 
 
 	}
@@ -87,35 +113,37 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 	unsigned int stride = blockDim.x * gridDim.x;
 	for (unsigned int i = index; i < partcount; i += stride)
 	{
-		unsigned int XGridI = (int)(Ppos[index].x / tsize) + 1;
-		unsigned int YGridI = (int)(Ppos[index].y / tsize) + 1;
-		unsigned int ZGridI = (int)(Ppos[index].z / tsize) + 1;
+		unsigned int XGridI = (int)(Ppos[index].x / tsize) ;
+		unsigned int YGridI = (int)(Ppos[index].y / tsize) ;
+		unsigned int ZGridI = (int)(Ppos[index].z / tsize) ;
 
 
-		float ax = Ppos[index].x / tsize - XGridI + 1;
-		float ay = Ppos[index].y / tsize - YGridI + 1;
-		float az = Ppos[index].z / tsize - ZGridI + 1;
+		float ax = Ppos[index].x / tsize - XGridI ;
+		float ay = Ppos[index].y / tsize - YGridI ;
+		float az = Ppos[index].z / tsize - ZGridI ;
 
-		float xvit = (ax) * MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].x + (1 - ax) * MACgridSpeed[gind(XGridI - 1, YGridI, ZGridI, MACbox)].x;
-		float yvit = (ay) * MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].y + (1 - ay) * MACgridSpeed[gind(XGridI , YGridI-1, ZGridI, MACbox)].y;
-		float zvit = (az) * MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].z + (1 - az) * MACgridSpeed[gind(XGridI , YGridI, ZGridI-1, MACbox)].z;
+		float xvit = (ax) * MACgridSpeed[gind(XGridI+1, YGridI, ZGridI, MACbox)].x + (1 - ax) * MACgridSpeed[gind(XGridI , YGridI, ZGridI, MACbox)].x;
+		float yvit = (ay) * MACgridSpeed[gind(XGridI, YGridI+1, ZGridI, MACbox)].y + (1 - ay) * MACgridSpeed[gind(XGridI , YGridI, ZGridI, MACbox)].y;
+		float zvit = (az) * MACgridSpeed[gind(XGridI, YGridI, ZGridI+1, MACbox)].z + (1 - az) * MACgridSpeed[gind(XGridI , YGridI, ZGridI, MACbox)].z;
 
-		float Oxvit = (ax)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI, MACbox)].x + (1 - ax) * MACgridSpeedSave[gind(XGridI - 1, YGridI, ZGridI, MACbox)].x;
-		float Oyvit = (ay)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI, MACbox)].y + (1 - ay) * MACgridSpeedSave[gind(XGridI, YGridI - 1, ZGridI, MACbox)].y;
-		float Ozvit = (az)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI, MACbox)].z + (1 - az) * MACgridSpeedSave[gind(XGridI, YGridI, ZGridI - 1, MACbox)].z;
+		float Oxvit = (ax)*MACgridSpeedSave[gind(XGridI+1 ,YGridI, ZGridI, MACbox)].x + (1 - ax) * MACgridSpeedSave[gind(XGridI , YGridI, ZGridI, MACbox)].x;
+		float Oyvit = (ay)*MACgridSpeedSave[gind(XGridI, YGridI+1, ZGridI, MACbox)].y + (1 - ay) * MACgridSpeedSave[gind(XGridI, YGridI , ZGridI, MACbox)].y;
+		float Ozvit = (az)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI+1, MACbox)].z + (1 - az) * MACgridSpeedSave[gind(XGridI, YGridI, ZGridI , MACbox)].z;
 
-		Pvit[index].x = xvit*0.05+(xvit-Oxvit+ Pvit[index].x)*0.95;
-		Pvit[index].y = yvit*0.05+ (yvit - Oyvit + Pvit[index].y) * 0.95;
-		Pvit[index].z = zvit*0.05+ (zvit - Ozvit + Pvit[index].z) * 0.95;
 
 #ifdef DEBUG
 #ifdef D_VIT
-		//if ( (xvit - Pvit[index].x) != 0 || (yvit - Pvit[index].y) !=0|| (zvit - Pvit[index].z)!=0)
-		//{
+		if ( (xvit - Pvit[index].x) != 0 || (yvit - Pvit[index].y) !=0|| (zvit - Pvit[index].z)!=0)
+		{
 			printf("il y a une difference de : %f %f %f entre la vitesse de base et celle interpole \n", xvit - Pvit[index].x, yvit - Pvit[index].y, zvit - Pvit[index].z);
-		//}
+			//printf("il y a une difference de : %d %f %f %f entre la vitesse de base et celle interpole \n", gind(XGridI + 1, YGridI, ZGridI, MACbox), xvit, yvit, zvit);
+		}
 #endif
 #endif
+
+		Pvit[index].x = xvit * (1 - FLIPNESS) + (xvit - Oxvit + Pvit[index].x) * FLIPNESS;
+		Pvit[index].y = yvit * (1 - FLIPNESS) + (yvit - Oyvit + Pvit[index].y) * FLIPNESS;
+		Pvit[index].z = zvit * (1 - FLIPNESS) + (zvit - Ozvit + Pvit[index].z) * FLIPNESS;
 
 
 	}
@@ -125,15 +153,28 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 
 // normaliser la grille
 #ifdef DEBUG
-__global__ void GridNormalV2_k(uint3 MACbox,float3* MACgridSpeed, float3* MACweight,float* Tweight)
+__global__ void GridNormalV2_k(uint3 MACbox,float3* MACgridSpeed, float3* MACweight,float* Tweight, float3* MACgridSpeedSave)
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox);
 
 	atomicAdd(Tweight, MACweight[index].x+ MACweight[index].y+ MACweight[index].z);
 
-	MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
-	MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
-	MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
+	if (MACweight[index].x != 0)
+	{
+		MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
+		MACgridSpeedSave[index].x = MACgridSpeed[index].x;
+
+	}
+	if (MACweight[index].y != 0)
+	{
+		MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
+		MACgridSpeedSave[index].y = MACgridSpeed[index].y;
+	}
+	if (MACweight[index].z != 0)
+	{
+		MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
+		MACgridSpeedSave[index].z = MACgridSpeed[index].z;
+	}
 
 #ifdef D_VIT
 
@@ -271,6 +312,65 @@ __global__ void euler_k(int partCount,float3* Ppos,float3* Pvit,float tstep,floa
 	}
 }
 
+__global__ void RKT2_k(int partCount, float3* Ppos, float3* Pvit, float tstep, float tsize, float3* MACGridSpeed,uint3 MACbox,uint3 box,unsigned int* type)
+{
+	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int stride = blockDim.x * gridDim.x;
+	for (unsigned int i = index; i < partCount; i += stride)
+	{
+
+
+		float intx = Pvit[index].x * tstep /2+ Ppos[index].x;
+		float inty = Pvit[index].y * tstep/2+ Ppos[index].y;
+		float intz = Pvit[index].z * tstep/2 + Ppos[index].z;
+
+		float3 semivit = interpolate(make_float3(intx, inty, intz), MACbox, MACGridSpeed, tsize);
+
+		unsigned int XGridIB = (int)(Ppos[index].x / tsize);
+		unsigned int YGridIB = (int)(Ppos[index].y / tsize);
+		unsigned int ZGridIB = (int)(Ppos[index].z / tsize);
+
+		Ppos[index].x += semivit.x * tstep;
+		Ppos[index].y += semivit.y * tstep;
+		Ppos[index].z += semivit.z * tstep;
+
+		unsigned int XGridI = (int)(Ppos[index].x / tsize);
+		unsigned int YGridI = (int)(Ppos[index].y / tsize);
+		unsigned int ZGridI = (int)(Ppos[index].z / tsize);
+
+		if (type[gind(XGridI, YGridIB, ZGridIB, box)]==1)
+		{
+			Ppos[index].x = tsize * llroundf(Ppos[index].x / tsize)* (1 + (llroundf(Ppos[index].x / tsize) - (int)(Ppos[index].x / tsize)-0.5)*0.05 );
+		}
+
+		if (type[gind(XGridIB, YGridI, ZGridIB, box)] == 1)
+		{
+			Ppos[index].y = tsize * llroundf(Ppos[index].y / tsize) * (1 + (llroundf(Ppos[index].y / tsize) - (int)(Ppos[index].y / tsize)-0.5) * 0.05);
+		}
+
+		if (type[gind(XGridIB, YGridIB, ZGridI, box)] == 1)
+		{
+			Ppos[index].z = tsize * llroundf(Ppos[index].z / tsize) *(1 + (llroundf(Ppos[index].z / tsize) - (int)(Ppos[index].z / tsize) - 0.5) * 0.05);
+		}
+
+
+
+
+
+		if (type[gind(XGridIB, YGridIB, ZGridIB, box)] == 1)
+		{
+			printf("je suis dans la sauce %d %d %d \n", XGridI, YGridI, ZGridI);
+		}
+
+		//printf("hmm %f \n", absmin(Pvit[index].y * tstep, tsize * 0.98));
+
+
+
+	}
+
+
+}
+
 __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsigned int* type)
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
@@ -356,7 +456,7 @@ __global__ void div_calc_k(float3* MACgridSpeed, uint3 box, uint3 MACbox,float* 
 			(MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
-			/ tsize ;
+			/ tsize - fmaxf(dens-density,0);
 
 	}
 }
@@ -390,42 +490,49 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 
 	if (type[index] == 2)
 	{
-		
+		/*
+		if (blockIdx.x == 8 && blockIdx.y == 1 && blockIdx.z == 4)
+		{
+			printf("la vitesseB est %f %f \n", MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x, MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x);
+		}
+		*/
 
-		if (type[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box) != 1])
+		if (type[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] != 1)
 		{
 			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x -=
 				(gridPressure[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z,box)] ) / tsize;
 		}
 
-		if (type[gind(blockIdx.x, blockIdx.y +1, blockIdx.z, box) != 1])
+		if (type[gind(blockIdx.x, blockIdx.y +1, blockIdx.z, box)] != 1)
 		{
 			MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y -=
 				(gridPressure[gind(blockIdx.x , blockIdx.y +1 , blockIdx.z, box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z, box)]) / tsize;
+
+			//MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y
 		}
 
-		if (type[gind(blockIdx.x , blockIdx.y, blockIdx.z +1 , box) != 1])
+		if (type[gind(blockIdx.x , blockIdx.y, blockIdx.z +1 , box)] != 1)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z +1 , MACbox)].z -=
 				(gridPressure[gind(blockIdx.x , blockIdx.y, blockIdx.z +1, box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z, box)]) / tsize;
 		}
 
 
-		if (type[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box) != 1])
+		if (type[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] != 1)
 		{
-			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x -=
+			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z, MACbox)].x -=
 				(gridPressure[gind(blockIdx.x , blockIdx.y, blockIdx.z,box)] - gridPressure[gind(blockIdx.x-1, blockIdx.y, blockIdx.z, box)]) / tsize;
 		}
 
-		if (type[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box) != 1])
+		if (type[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box)] != 1)
 		{
-			MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y -=
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -=
 				(gridPressure[gind(blockIdx.x, blockIdx.y , blockIdx.z, box)] - gridPressure[gind(blockIdx.x, blockIdx.y-1, blockIdx.z, box)]) / tsize;
 		}
 
-		if (type[gind(blockIdx.x, blockIdx.y, blockIdx.z -1, box) != 1])
+		if (type[gind(blockIdx.x, blockIdx.y, blockIdx.z -1, box)] != 1)
 		{
-			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z -=
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z , MACbox)].z -=
 				(gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z , box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z-1, box)]) / tsize;
 		}
 
@@ -435,14 +542,25 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
 			/ tsize;
 		
-		/*
-		if (fabsf(div) > 0.5)
+#ifdef D_DIV
+		
+		if (fabsf(div) > 0.9)
 		{
 			printf("la divergence %f \n", div);
 		}
-		*/
 
+#endif
+
+		//printf("la divergence %f \n", div);
+		/*
+		if (blockIdx.x == 8 && blockIdx.y == 1 && blockIdx.z == 4)
+		{
+			printf("la vitesseA est %f %f \n", MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z, MACbox)].x, MACgridSpeed[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x);
+		}
+		*/
 	}
+
+
 }
 
 extern "C"
@@ -478,7 +596,8 @@ void TransfertToGridV2(FlipSim * flipEngine)
 		flipEngine->MACBoxIndice,
 		flipEngine->MACGridSpeed,
 		flipEngine->MACGridWeight,
-		tweight
+		tweight,
+		flipEngine->MACGridSpeedSave
 		);
 
 	getLastCudaError("Kernel execution failed: GridNormalV2_k");
@@ -557,6 +676,23 @@ void EulerIntegrateV2(FlipSim * flipEngine)
 {
 	unsigned int count = flipEngine->PartCount;
 
+#ifdef RK2
+
+	RKT2_k << <(count / 512 + 1), 512 >> > (
+		count,
+		flipEngine->Partpos,
+		flipEngine->Partvit,
+		flipEngine->TimeStep,
+		flipEngine->tileSize,
+		flipEngine->MACGridSpeed,
+		flipEngine->MACBoxIndice,
+		flipEngine->BoxIndice,
+		flipEngine->type);
+
+	getLastCudaError("Kernel execution failed: RKT2_k");
+
+#else
+
 	euler_k << <(count / 512+1), 512 >> > (
 		count,
 		flipEngine->Partpos,
@@ -565,6 +701,8 @@ void EulerIntegrateV2(FlipSim * flipEngine)
 		flipEngine->tileSize);
 
 	getLastCudaError("Kernel execution failed: euler_k");
+
+#endif
 
 }
 
@@ -598,7 +736,7 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 		flipEngine->type,
 		flipEngine->tileSize,
 		flipEngine->MACGridWeight,
-		8.0);
+		24.0);
 
 	getLastCudaError("Kernel execution failed: div_calc_k");
 
