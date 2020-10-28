@@ -81,7 +81,7 @@ __global__ void TrToGrV2_k(uint3 MACbox,unsigned int partcount,float tsize,float
 // apres debug la trilinéarisation est correct !!! 
 
 //fonction copier du dessus qui transfert la vitesse de la grille au particule
-__global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, float3* MACgridSpeed, float3* MACweight, float3* Ppos, float3* Pvit)
+__global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, float3* MACgridSpeed, float3* MACweight, float3* Ppos, float3* Pvit, float3* MACgridSpeedSave)
 {
 	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int stride = blockDim.x * gridDim.x;
@@ -100,9 +100,13 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 		float yvit = (ay) * MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].y + (1 - ay) * MACgridSpeed[gind(XGridI , YGridI-1, ZGridI, MACbox)].y;
 		float zvit = (az) * MACgridSpeed[gind(XGridI, YGridI, ZGridI, MACbox)].z + (1 - az) * MACgridSpeed[gind(XGridI , YGridI, ZGridI-1, MACbox)].z;
 
-		Pvit[index].x = xvit;
-		Pvit[index].y = yvit;
-		Pvit[index].z = zvit;
+		float Oxvit = (ax)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI, MACbox)].x + (1 - ax) * MACgridSpeedSave[gind(XGridI - 1, YGridI, ZGridI, MACbox)].x;
+		float Oyvit = (ay)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI, MACbox)].y + (1 - ay) * MACgridSpeedSave[gind(XGridI, YGridI - 1, ZGridI, MACbox)].y;
+		float Ozvit = (az)*MACgridSpeedSave[gind(XGridI, YGridI, ZGridI, MACbox)].z + (1 - az) * MACgridSpeedSave[gind(XGridI, YGridI, ZGridI - 1, MACbox)].z;
+
+		Pvit[index].x = xvit*0.05+(xvit-Oxvit+ Pvit[index].x)*0.95;
+		Pvit[index].y = yvit*0.05+ (yvit - Oyvit + Pvit[index].y) * 0.95;
+		Pvit[index].z = zvit*0.05+ (zvit - Ozvit + Pvit[index].z) * 0.95;
 
 #ifdef DEBUG
 #ifdef D_VIT
@@ -139,20 +143,24 @@ __global__ void GridNormalV2_k(uint3 MACbox,float3* MACgridSpeed, float3* MACwei
 
 }
 #else
-__global__ void GridNormalV2_k(uint3 MACbox, float3* MACgridSpeed, float3* MACweight)
+__global__ void GridNormalV2_k(uint3 MACbox, float3* MACgridSpeed, float3* MACweight, float3* MACgridSpeedSave)
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox);
 	if (MACweight[index].x != 0)
 	{
 		MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
+		MACgridSpeedSave[index].x = MACgridSpeed[index].x;
+
 	}
 	if (MACweight[index].y != 0)
 	{
 		MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
+		MACgridSpeedSave[index].y = MACgridSpeed[index].y;
 	}
 	if (MACweight[index].z != 0)
 	{
 		MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
+		MACgridSpeedSave[index].z = MACgridSpeed[index].z;
 	}
 
 }
@@ -426,11 +434,13 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
 			/ tsize;
-
+		
+		/*
 		if (fabsf(div) > 0.5)
 		{
 			printf("la divergence %f \n", div);
 		}
+		*/
 
 	}
 }
@@ -478,7 +488,8 @@ void TransfertToGridV2(FlipSim * flipEngine)
 	GridNormalV2_k << <MACmat, 1 >> > (
 		flipEngine->MACBoxIndice,
 		flipEngine->MACGridSpeed,
-		flipEngine->MACGridWeight
+		flipEngine->MACGridWeight,
+		flipEngine->MACGridSpeedSave
 		);
 	getLastCudaError("Kernel execution failed: GridNormalV2_k");
 #endif
@@ -516,7 +527,8 @@ void TransfertToPartV2(FlipSim * flipEngine)
 		flipEngine->MACGridSpeed,
 		flipEngine->MACGridWeight,
 		flipEngine->Partpos,
-		flipEngine->Partvit
+		flipEngine->Partvit,
+		flipEngine->MACGridSpeedSave
 		);
 
 	getLastCudaError("Kernel execution failed: TrToPrV2_k");
@@ -588,6 +600,7 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 		flipEngine->MACGridWeight,
 		8.0);
 
+	getLastCudaError("Kernel execution failed: div_calc_k");
 
 	for (int i = 0; i < step; i++)
 	{

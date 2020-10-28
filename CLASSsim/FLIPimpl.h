@@ -24,6 +24,8 @@ public:
 	int MACIndiceCount;
 
 	float3* MACGridSpeed;
+	float3* MACGridSpeedSave;
+
 	float3* MACGridWeight;
 
 	unsigned int* type; // 0 is air 1 is solid 2 is fluid
@@ -36,6 +38,7 @@ public:
 	int PartCount;
 
 	float3* Partpos;
+	
 	float3* Partvit;
 
 	float TimeStep;

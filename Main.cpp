@@ -123,7 +123,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartCount,0.001);
+    FlipSim FlipEngine(40.0, 20.0, 20.0, 1.0, PartCount,0.01);
 
 
     GLuint particles_position_buffer;

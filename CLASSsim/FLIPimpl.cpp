@@ -61,6 +61,8 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 	cudaMalloc(&Partvit, PartCount * sizeof(float3));
 	cudaMemset(Partvit, 0, PartCount * sizeof(float3));
 
+	cudaMalloc(&MACGridSpeedSave, MACIndiceCount * sizeof(float3));
+
 	cudaMalloc(&MACGridSpeed, (MACIndiceCount) * sizeof(float3));
 	cudaMemset(MACGridSpeed, 0, (MACIndiceCount) * sizeof(float3));
 
