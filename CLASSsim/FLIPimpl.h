@@ -41,10 +41,15 @@ public:
 	
 	float3* Partvit;
 
+	float* Partcol;
+
 	float TimeStep;
 
 	struct cudaGraphicsResource* cuda_pos_resource;
 	size_t num_bytes_pos;
+
+	struct cudaGraphicsResource* cuda_col_resource;
+	size_t num_bytes_col;
 
 	FlipSim(float width, float height, float length, float tsize, unsigned int partcount, float tstep);
 
@@ -61,6 +66,8 @@ public:
 	void EndCompute();
 
 	void linkPos(GLuint buffer);
+
+	void linkCol(GLuint buffer);
 
 	void Boundaries();
 

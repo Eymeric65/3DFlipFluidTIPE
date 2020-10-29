@@ -27,6 +27,8 @@
 
 //#define ONESTEPSIM
 
+#define WAITTIME 20
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -95,7 +97,7 @@ int main()
     std::vector<GLfloat> v_vertex_data;
     std::vector<GLuint> v_indices;
 
-    int vertcount = spherecreate(v_vertex_data, v_indices, 5, 5);
+    int vertcount = spherecreate(v_vertex_data, v_indices, 10, 10);
 
     std::vector<glm::vec3> position;
 
@@ -103,16 +105,16 @@ int main()
 
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 30; x += 1)
+    for (int x = 0; x < 60; x += 1)
     {
-        for (int y = 0; y < 35; y += 1)
+        for (int y = 0; y < 80; y += 1)
         {
-            for (int z = 0; z < 40; z += 1)
+            for (int z = 0; z < 80; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 2.0f + 1.f;
-                translation.y = (float)y / 2.0f +1.f;
-                translation.z = (float)z / 2.0f + 1.f;
+                translation.x = (float)x / 1.f + 2.5f;
+                translation.y = (float)y / 1.f +2.5f;
+                translation.z = (float)z / 1.f + 2.5f;
 
                 position.push_back(translation);
 
@@ -123,7 +125,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(42.0, 22.0, 22.0, 1.0, PartCount,0.03);
+    FlipSim FlipEngine(168.0, 88.0, 88.0, 2.0, PartCount,0.05);
 
 
     GLuint particles_position_buffer;
@@ -132,10 +134,19 @@ int main()
     // Initialize with empty (NULL) buffer : it will be updated later, each frame.
     glBufferData(GL_ARRAY_BUFFER, position.size() * 3 * sizeof(float), position.data(), GL_DYNAMIC_DRAW);
 
+    FlipEngine.linkPos(particles_position_buffer);
+
+    GLuint particles_bubble_buffer;
+    glGenBuffers(1, &particles_bubble_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, particles_bubble_buffer);
+    // Initialize with empty (NULL) buffer : it will be updated later, each frame.
+    glBufferData(GL_ARRAY_BUFFER, position.size() * sizeof(float), 0, GL_DYNAMIC_DRAW);
+
+    FlipEngine.linkCol(particles_bubble_buffer);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    FlipEngine.linkPos(particles_position_buffer);
+
 
     unsigned int VBO, VAO, EBO;
     glGenVertexArrays(1, &VAO);
@@ -160,10 +171,14 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
 
+    glEnableVertexAttribArray(2);
+    glBindBuffer(GL_ARRAY_BUFFER, particles_bubble_buffer);
+    glVertexAttribPointer(2, 1, GL_FLOAT, GL_FALSE,  sizeof(GLfloat), (void*)0);
+
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glVertexAttribDivisor(0, 0); // particles vertices : always reuse the same 4 vertices -> 0
     glVertexAttribDivisor(1, 1); // positions : one per quad (its center) -> 1
-
+    glVertexAttribDivisor(2, 1);
     // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
 
 
@@ -230,7 +245,7 @@ int main()
 
         // render
         // ------
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.f, 0.f, 0.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // draw our first triangle
@@ -244,7 +259,7 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
 
 
-        view = glm::translate(view, glm::vec3(-20.0f, -20.0f, -30.0f));
+        view = glm::translate(view, glm::vec3(-60.0f, -55.0f, -150.0f));
 
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
 
@@ -265,32 +280,35 @@ int main()
         glUniform3f(lightcolor, 1.0f, 1.0f, 1.0f);
 
 
-        glUniform3f(Objectcolor, 0.7f, 0.0f, 0.0f);
+        glUniform3f(Objectcolor, 0.08f, 0.3f, 0.89f);
 
         int lightPos = glGetUniformLocation(firstshader.ID, "lightPos");
         glUniform3f(lightPos, 0.0f, 2.0f, 2.0f);
 
 #ifdef ONESTEPSIM
 #else
-        
-        FlipEngine.StartCompute();
+        if (glfwGetTime() > WAITTIME)
+        {
 
-        FlipEngine.TransferToGrid();
+            FlipEngine.StartCompute();
+
+            FlipEngine.TransferToGrid();
 
 
-        FlipEngine.AddExternalForces();
-        
-        FlipEngine.Boundaries();
+            FlipEngine.AddExternalForces();
 
-        FlipEngine.PressureCompute();
+            FlipEngine.Boundaries();
 
-        FlipEngine.AddPressure();
+            FlipEngine.PressureCompute();
 
-        FlipEngine.TransferToParticule();
+            FlipEngine.AddPressure();
 
-        FlipEngine.Integrate();
+            FlipEngine.TransferToParticule();
 
-        FlipEngine.EndCompute();
+            FlipEngine.Integrate();
+
+            FlipEngine.EndCompute();
+        }
 
 #endif
         
@@ -312,7 +330,7 @@ int main()
 
 
     // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
+    // ---------------------------------------s---------------------------------
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     //glDeleteBuffers(1, &EBO);

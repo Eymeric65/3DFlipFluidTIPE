@@ -17,7 +17,18 @@
 #define RK2
 #define BOUNDARY_WALL_ONLY
 
+#define GRAV
 
+//#define CENTRAL
+
+#define CENTRAL_F 100
+#define CENTRAL_F_X 80.5
+#define CENTRAL_F_Y 40.5
+#define CENTRAL_F_Z 40.5
+
+#define BUBBLETRSH 15
+
+//#define FASTJAC // bon enfaite c'est pas plus rapide de paralléliser
 
 __device__ unsigned int gind(unsigned int indiceX, unsigned int indiceY, unsigned int indiceZ, uint3 BoxIndice)
 {
@@ -107,7 +118,7 @@ __global__ void TrToGrV2_k(uint3 MACbox,unsigned int partcount,float tsize,float
 // apres debug la trilinéarisation est correct !!! 
 
 //fonction copier du dessus qui transfert la vitesse de la grille au particule
-__global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, float3* MACgridSpeed, float3* MACweight, float3* Ppos, float3* Pvit, float3* MACgridSpeedSave)
+__global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, float3* MACgridSpeed, float3* MACweight, float3* Ppos, float3* Pvit, float3* MACgridSpeedSave,float* Pcol)
 {
 	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int stride = blockDim.x * gridDim.x;
@@ -141,9 +152,22 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 #endif
 #endif
 
-		Pvit[index].x = xvit * (1 - FLIPNESS) + (xvit - Oxvit + Pvit[index].x) * FLIPNESS;
-		Pvit[index].y = yvit * (1 - FLIPNESS) + (yvit - Oyvit + Pvit[index].y) * FLIPNESS;
-		Pvit[index].z = zvit * (1 - FLIPNESS) + (zvit - Ozvit + Pvit[index].z) * FLIPNESS;
+		float pvitx = xvit * (1 - FLIPNESS) + (xvit - Oxvit + Pvit[index].x) * FLIPNESS;
+		float pvity = yvit * (1 - FLIPNESS) + (yvit - Oyvit + Pvit[index].y) * FLIPNESS;
+		float pvitz = zvit * (1 - FLIPNESS) + (zvit - Ozvit + Pvit[index].z) * FLIPNESS;
+
+		float dist = pow(pvitx - Pvit[index].x, 2) + pow(pvity - Pvit[index].y, 2) + pow(pvitz - Pvit[index].z, 2);
+
+		if (dist > BUBBLETRSH)
+		{
+			Pcol[index] = (dist)/25;
+		}
+
+		Pvit[index].x = pvitx;
+		Pvit[index].y = pvity;
+		Pvit[index].z = pvitz;
+
+		
 
 
 	}
@@ -262,6 +286,23 @@ __global__ void set_typeWalls_k(uint3 box, unsigned int* type)
 		type[index] = 1;
 	}
 
+	//le mur
+	/*
+	if (blockIdx.x >= 30 &&
+		blockIdx.y <= 12 &&
+		blockIdx.x <= 33 )
+	{
+		type[index] = 1;
+	}
+	
+	if (blockIdx.x >= 29 &&
+		blockIdx.y == 13 &&
+		blockIdx.x <= 33 )
+	{
+		type[index] = 1;
+	}
+	*/
+
 #ifdef DEBUG
 #ifdef D_TYPE
 	if (blockIdx.x== 30&& blockIdx.y==20&& blockIdx.z==20 )
@@ -272,16 +313,39 @@ __global__ void set_typeWalls_k(uint3 box, unsigned int* type)
 #endif
 }
 
-__global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpeed,unsigned int* type,float tstep)
+__global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpeed,unsigned int* type,float tstep,float tsize)
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
 
 	if (type[index] == 2)
 	{
 		//Gravité
+#ifdef GRAV
 		MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= 9.81 * tstep;
 		MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y -= 9.81 * tstep;
+#endif
+		//force Centrale
+#ifdef CENTRAL
+		if (threadIdx.x == 0)
+		{
 
+			float r = pow(blockIdx.x * tsize - CENTRAL_F_X, 2) + pow(blockIdx.y * tsize - CENTRAL_F_Y, 2) + pow(blockIdx.z * tsize - CENTRAL_F_Z, 2);
+
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x -= CENTRAL_F * (blockIdx.x * tsize - CENTRAL_F_X) / r * tstep;
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= CENTRAL_F * ((blockIdx.y) * tsize - CENTRAL_F_Y) / r * tstep;
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z -= CENTRAL_F * (blockIdx.z * tsize - CENTRAL_F_Z) / r * tstep;
+		}
+
+		if (threadIdx.x == 1)
+		{
+
+			float r1 = pow((blockIdx.x + 1) * tsize - CENTRAL_F_X, 2) + pow((blockIdx.y + 1) * tsize - CENTRAL_F_Y, 2) + pow((blockIdx.z + 1) * tsize - CENTRAL_F_Z, 2);
+
+			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x -= CENTRAL_F * ((blockIdx.x + 1) * tsize + 1 - CENTRAL_F_X) / r1 * tstep;
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y -= CENTRAL_F * ((blockIdx.y + 1) * tsize + 1 - CENTRAL_F_Y) / r1 * tstep;
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z -= CENTRAL_F * ((blockIdx.z + 1) * tsize - CENTRAL_F_Z) / r1 * tstep;
+		}
+#endif
 	}
 
 
@@ -379,7 +443,7 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 	{
 		//printf("la case %d %d %d est solide \n", blockIdx.x, blockIdx.y, blockIdx.z);
 
-		if (blockIdx.x >= 1)
+		if (blockIdx.x >= 1&& MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x>0)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x = 0;
 #ifdef BOUNDARY_WALL_ONLY
@@ -388,7 +452,7 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 #endif
 		}
 
-		if (blockIdx.y >= 1)
+		if (blockIdx.y >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y > 0)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y = 0;
 #ifdef BOUNDARY_WALL_ONLY
@@ -397,7 +461,7 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 #endif
 		}
 
-		if (blockIdx.z >= 1)
+		if (blockIdx.z >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z > 0)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z = 0;
 #ifdef BOUNDARY_WALL_ONLY
@@ -407,7 +471,7 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 		}
 
 
-		if (blockIdx.x <= box.x-2)
+		if (blockIdx.x <= box.x-2 && MACgridSpeed[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x < 0)
 		{
 			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x = 0;
 #ifdef BOUNDARY_WALL_ONLY
@@ -416,7 +480,7 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 #endif
 		}
 
-		if (blockIdx.y <= box.y - 2)
+		if (blockIdx.y <= box.y - 2 && MACgridSpeed[gind(blockIdx.x , blockIdx.y +1, blockIdx.z, MACbox)].y < 0)
 		{
 			MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y = 0;
 #ifdef BOUNDARY_WALL_ONLY
@@ -425,7 +489,7 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 #endif
 		}
 
-		if (blockIdx.z <= box.z - 2)
+		if (blockIdx.z <= box.z - 2 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z+1, MACbox)].z < 0)
 		{
 			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z+1, MACbox)].z = 0;
 #ifdef BOUNDARY_WALL_ONLY
@@ -456,7 +520,7 @@ __global__ void div_calc_k(float3* MACgridSpeed, uint3 box, uint3 MACbox,float* 
 			(MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
-			/ tsize - fmaxf(dens-density,0);
+			/ tsize - fmaxf(dens - density, 0);
 
 	}
 }
@@ -465,10 +529,64 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
 
-	if (type[index] == 2)
+	if (type[index] != 1)
 	{
+#ifdef FASTJAC
+
+		int t = threadIdx.x;
+		__shared__ float pressure;
+
+		if (t == 0)
+		{
+			pressure = 0;
+		}
+
+		__syncthreads();
+
+		if (t == 0)
+		{
+			atomicAdd(&pressure, gridPressureB[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)]);
+		}
+
+		if (t == 1)
+		{
+			atomicAdd(&pressure, gridPressureB[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)]);
+		}
+
+		if (t == 2)
+		{
+			atomicAdd(&pressure, gridPressureB[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box)]);
+		}
+		if (t == 3)
+		{
+			atomicAdd(&pressure, gridPressureB[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, box)]);
+		}
+		if (t == 4)
+		{
+			atomicAdd(&pressure, gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z - 1, box)]);
+		}
+		if (t == 5)
+		{
+			atomicAdd(&pressure, gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, box)]);
+		}
+		if (t == 6)
+		{
+			atomicAdd(&pressure, - gridDiv[index]);
+		}
+
+
+
+		__syncthreads();
+
+		if (t == 0)
+		{
+			gridPressureA[index] = pressure / 6;
+		}
+
+#else
 
 		float div = gridDiv[index];
+
 
 		gridPressureA[index] =
 			(gridPressureB[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] +
@@ -477,7 +595,10 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 				gridPressureB[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, box)] +
 				gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z - 1, box)] +
 				gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, box)] - div) / 6;
+#endif
 
+		//printf("il y a une difference de %f %f %f\n", pressure - gridPressureA[index], pressure, gridPressureA[index]);
+		
 		//printf("test %f %d %d %d \n ", div,  blockIdx.x, blockIdx.y, blockIdx.z);
 
 	}
@@ -563,6 +684,8 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 
 }
 
+// FONCTION externe -----------------------------------------------------------------------------------------------------
+
 extern "C"
 void TransfertToGridV2(FlipSim * flipEngine)
 {
@@ -647,7 +770,8 @@ void TransfertToPartV2(FlipSim * flipEngine)
 		flipEngine->MACGridWeight,
 		flipEngine->Partpos,
 		flipEngine->Partvit,
-		flipEngine->MACGridSpeedSave
+		flipEngine->MACGridSpeedSave,
+		flipEngine->Partcol
 		);
 
 	getLastCudaError("Kernel execution failed: TrToPrV2_k");
@@ -660,12 +784,13 @@ void AddExternalForcesV2(FlipSim * flipEngine)
 	uint3 box = flipEngine->BoxIndice;
 	dim3 mat(box.x, box.y, box.z);
 
-	add_external_forces_k<<<mat ,1>>>(
+	add_external_forces_k<<<mat ,2>>>(
 		box, 
 		flipEngine->MACBoxIndice,
 		flipEngine->MACGridSpeed,
 		flipEngine->type,
-		flipEngine->TimeStep);
+		flipEngine->TimeStep,
+		flipEngine->tileSize);
 
 	getLastCudaError("Kernel execution failed: add_external_forces_k");
 
@@ -743,7 +868,19 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 	for (int i = 0; i < step; i++)
 	{
 
-		jacobi_iter_k<<<mat,1>>>(
+#ifdef FASTJAC
+
+		jacobi_iter_k<<<mat,7>>>(
+			box,
+			flipEngine->MACBoxIndice,
+			flipEngine->MACGridSpeed,
+			flipEngine->GridPressureA,
+			flipEngine->GridPressureB,
+			flipEngine->type,
+			flipEngine->tileSize,
+			flipEngine->GridDiv);
+#else
+		jacobi_iter_k << <mat, 1 >> > (
 			box,
 			flipEngine->MACBoxIndice,
 			flipEngine->MACGridSpeed,
@@ -753,6 +890,7 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 			flipEngine->tileSize,
 			flipEngine->GridDiv);
 
+#endif
 		getLastCudaError("Kernel execution failed: jacobi_iter_k");
 
 		pressure_copy_k<<<mat,1>>>(

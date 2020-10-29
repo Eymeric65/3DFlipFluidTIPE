@@ -129,14 +129,21 @@ void FlipSim::endSim()
 void FlipSim::StartCompute()
 {
 	cudaGraphicsMapResources(1, &cuda_pos_resource, 0);
-
 	cudaGraphicsResourceGetMappedPointer((void**)&Partpos, &num_bytes_pos, cuda_pos_resource);
+
+	cudaGraphicsMapResources(1, &cuda_col_resource, 0);
+	cudaGraphicsResourceGetMappedPointer((void**)&Partcol, &num_bytes_col, cuda_col_resource);
 
 }
 
 void FlipSim::linkPos(GLuint buffer)
 {
 	cudaGraphicsGLRegisterBuffer(&cuda_pos_resource, buffer, cudaGraphicsRegisterFlagsNone);
+}
+
+void FlipSim::linkCol(GLuint buffer)
+{
+	cudaGraphicsGLRegisterBuffer(&cuda_col_resource, buffer, cudaGraphicsRegisterFlagsNone);
 }
 
 void FlipSim::Integrate()
@@ -148,6 +155,7 @@ void FlipSim::EndCompute()
 {
 	cudaGraphicsUnmapResources(1, &cuda_pos_resource, 0);
 
+	cudaGraphicsUnmapResources(1, &cuda_col_resource, 0);
 	//std::cout << "la taille est " << vit[0].x << std::endl;
 
 }
