@@ -75,6 +75,8 @@ public:
 
 	void AddPressure();
 
+	void TempWalls(bool Trigger);
+
 	//a faire
 	
 

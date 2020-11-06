@@ -17,6 +17,8 @@ extern "C" void JacobiIterV2(FlipSim * flipEngine, int step);
 
 extern "C" void AddPressureV2(FlipSim * flipEngine);
 
+extern "C" void setTempWall(FlipSim * flipEngine, bool trigger);
+
 FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned int partcount,float tstep)
 {
 
@@ -113,6 +115,11 @@ void FlipSim::PressureCompute()
 void FlipSim::AddPressure()
 {
 	AddPressureV2(this);
+}
+
+void FlipSim::TempWalls(bool Trigger)
+{
+	setTempWall(this,Trigger);
 }
 
 void FlipSim::endSim()

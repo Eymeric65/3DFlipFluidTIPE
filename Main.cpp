@@ -27,7 +27,9 @@
 
 //#define ONESTEPSIM
 
-#define WAITTIME 20
+#define WAITTIME 2
+
+#define BREAKTIME 10
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -103,18 +105,21 @@ int main()
 
     ///std::cout << vertcount << std::endl;
 
+
+    //experience assez grande
+    
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 60; x += 1)
+    for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 80; y += 1)
+        for (int y = 0; y < 40; y += 1)
         {
-            for (int z = 0; z < 80; z += 1)
+            for (int z = 0; z < 40; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 1.f + 2.5f;
-                translation.y = (float)y / 1.f +2.5f;
-                translation.z = (float)z / 1.f + 2.5f;
+                translation.x = (float)x / 0.5f + 4.5f;
+                translation.y = (float)y / 0.5f +4.5f;
+                translation.z = (float)z / 0.5f + 4.5f;
 
                 position.push_back(translation);
 
@@ -125,7 +130,33 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(168.0, 88.0, 88.0, 2.0, PartCount,0.05);
+    FlipSim FlipEngine(168.0, 88.0, 88.0, 4.0, PartCount,0.02);
+    
+    /*
+    int index = 0;
+    float offset = 0.0f;
+    for (int x = 0; x < 15; x += 1)
+    {
+        for (int y = 0; y < 15; y += 1)
+        {
+            for (int z = 0; z < 10; z += 1)
+            {
+                glm::vec3 translation;
+                translation.x = (float)x / 30.0f + 0.055f;
+                translation.y = (float)y / 30.0f + 0.055f;
+                translation.z = (float)z / 30.0f + 0.055f;
+
+                position.push_back(translation);
+
+            }
+        }
+    }
+    
+    const int PartCount = position.size();
+    
+
+    FlipSim FlipEngine(1.0, 1.0, 0.5, 0.05, PartCount, 0.00000000001);
+    */
 
 
     GLuint particles_position_buffer;
@@ -215,7 +246,8 @@ int main()
     FlipEngine.Integrate();
 
     FlipEngine.EndCompute();
-    
+
+    bool walls = true;
 
     // render loop
     // -----------
@@ -290,9 +322,20 @@ int main()
         if (glfwGetTime() > WAITTIME)
         {
 
+
+
             FlipEngine.StartCompute();
 
             FlipEngine.TransferToGrid();
+
+            if (glfwGetTime() > BREAKTIME)
+            {
+          
+            }
+            else
+            {
+                FlipEngine.TempWalls(true);
+            }
 
 
             FlipEngine.AddExternalForces();
