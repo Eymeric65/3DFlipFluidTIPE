@@ -96,7 +96,6 @@
     <None Include="shader\vertexbase.vs" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="CUDA\CUDAkern.cu" />
     <CudaCompile Include="CUDA\CUDAkernv2.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

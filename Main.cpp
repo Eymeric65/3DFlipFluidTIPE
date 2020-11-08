@@ -23,13 +23,11 @@
 
 #include "CLASSsim/FLIPimpl.h"
 
-//#include<sphere.cpp>
-
 //#define ONESTEPSIM
 
 #define WAITTIME 2
 
-#define BREAKTIME 10
+#define BREAKTIME 4
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -107,18 +105,44 @@ int main()
 
 
     //experience assez grande
-    
+    //test drop 
+    /*
+    int index = 0;
+    float offset = 0.0f;
+    for (int x = 0; x < 20; x += 1)
+    {
+        for (int y = 0; y < 10; y += 1)
+        {
+            for (int z = 0; z < 20; z += 1)
+            {
+                glm::vec3 translation;
+                translation.x = (float)x / 1.0f + 2.5f;
+                translation.y = (float)y / 1.0f +170.5f;
+                translation.z = (float)z / 1.0f + 2.5f;
+
+                position.push_back(translation);
+
+            }
+        }
+    }
+
+    const int PartCount = position.size();
+
+
+    FlipSim FlipEngine(24, 200.0, 24, 2.0, PartCount,0.01);
+    */
+
     int index = 0;
     float offset = 0.0f;
     for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 40; y += 1)
+        for (int y = 0; y < 35; y += 1)
         {
-            for (int z = 0; z < 40; z += 1)
+            for (int z = 0; z < 35; z += 1)
             {
                 glm::vec3 translation;
                 translation.x = (float)x / 0.5f + 4.5f;
-                translation.y = (float)y / 0.5f +4.5f;
+                translation.y = (float)y / 0.5f + 4.5f;
                 translation.z = (float)z / 0.5f + 4.5f;
 
                 position.push_back(translation);
@@ -130,8 +154,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(168.0, 88.0, 88.0, 4.0, PartCount,0.02);
-    
+    FlipSim FlipEngine(180, 80, 80, 4, PartCount, 0.01);
     /*
     int index = 0;
     float offset = 0.0f;
@@ -270,6 +293,9 @@ int main()
             glfwSetWindowTitle(window, fps);
         }
 
+        FlipEngine.TimeStep = deltaTime;
+
+        //printf("diff de temps %f \n", deltaTime);
 
         // input
         // -----
@@ -328,13 +354,9 @@ int main()
 
             FlipEngine.TransferToGrid();
 
-            if (glfwGetTime() > BREAKTIME)
+            if (glfwGetTime() < BREAKTIME+WAITTIME)
             {
-          
-            }
-            else
-            {
-                FlipEngine.TempWalls(true);
+                //FlipEngine.TempWalls(true);
             }
 
 

@@ -17,10 +17,10 @@
 #define FLIPNESS 0.90
 
 #define RK2
-#define BOUNDARY_WALL_ONLY
+//#define BOUNDARY_WALL_ONLY
 
 #define GRAV
-#define GRAVITY 70
+#define GRAVITY 20
 
 //#define CENTRAL
 
@@ -33,7 +33,7 @@
 
 //#define FASTJAC // bon enfaite c'est pas plus rapide de paralléliser
 
-//#define SHORTCOMPUTE
+#define SHORTCOMPUTE
 #define LESSW
 
 __device__ unsigned int gind(unsigned int indiceX, unsigned int indiceY, unsigned int indiceZ, uint3 BoxIndice)
@@ -246,16 +246,13 @@ __global__ void set_typeWater_k(uint3 box,uint3 MACbox, float3* MACweight, unsig
 
 
 	if (
-		MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x != 0 ||
-		MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y != 0 ||
-		MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z != 0 ||
-
-		MACweight[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x != 0 ||
-		MACweight[gind(blockIdx.x, blockIdx.y+1, blockIdx.z, MACbox)].y != 0 ||
-		MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z+1, MACbox)].z != 0 )
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x != 0 && MACweight[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x != 0 )||
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y != 0 && MACweight[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y != 0 )||
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z != 0&& MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z != 0) )
 	{
 		type[index] = 2;
-		
+	
+		/*
 #ifdef LESSW
 #else
 		if(blockIdx.x>=1)
@@ -283,7 +280,7 @@ __global__ void set_typeWater_k(uint3 box,uint3 MACbox, float3* MACweight, unsig
 			type[gind(blockIdx.x , blockIdx.y, blockIdx.z+1, box)] = 2;
 		}
 #endif
-		
+		*/
 	}
 
 }
@@ -336,8 +333,8 @@ __global__ void set_typeTempWall_k(uint3 box, unsigned int* type,bool tr)
 
 	//le mur
 	
-	if (blockIdx.x >= 17 &&
-		blockIdx.x <= 19 )
+	if (blockIdx.x >= 20 &&
+		blockIdx.x <= 21 )
 	{
 		type[index] = 1;
 	}
@@ -349,11 +346,12 @@ __global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpe
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
 
-	if (type[index] == 2)
+	//if (type[index] == 2)
+	if(type[index] == 2)
 	{
 		//Gravité
 #ifdef GRAV
-		MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY* tstep;
+		MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
 		MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
 #endif
 		//force Centrale
@@ -563,7 +561,7 @@ __global__ void div_calc_k(float3* MACgridSpeed, uint3 box, uint3 MACbox,float* 
 			(MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
-			/ tsize - fmaxf(dens - density, 0);
+			/ (tsize) - fmaxf(dens - density, 0);
 
 	}
 }
@@ -576,6 +574,7 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 	if (		type[gind(blockIdx.x, blockIdx.y, blockIdx.z, box)] == 2 )
 
 	{
+		//printf("case de fluide \n");
 #else
 	if (type[index] != 1)
 	{
@@ -669,13 +668,13 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 		}
 		*/
 
-		if (type[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] != 1)
+		if (type[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] ==2)
 		{
 			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x -=
 				(gridPressure[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z,box)] ) ;
 		}
 
-		if (type[gind(blockIdx.x, blockIdx.y +1, blockIdx.z, box)] != 1)
+		if (type[gind(blockIdx.x, blockIdx.y +1, blockIdx.z, box)] == 2)
 		{
 			MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y -=
 				(gridPressure[gind(blockIdx.x , blockIdx.y +1 , blockIdx.z, box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z, box)]);
@@ -683,26 +682,26 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 			//MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y
 		}
 
-		if (type[gind(blockIdx.x , blockIdx.y, blockIdx.z +1 , box)] != 1)
+		if (type[gind(blockIdx.x , blockIdx.y, blockIdx.z +1 , box)] == 2)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z +1 , MACbox)].z -=
 				(gridPressure[gind(blockIdx.x , blockIdx.y, blockIdx.z +1, box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z, box)]);
 		}
 
 
-		if (type[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] != 1)
+		if (type[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] == 2)
 		{
 			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z, MACbox)].x -=
 				(gridPressure[gind(blockIdx.x , blockIdx.y, blockIdx.z,box)] - gridPressure[gind(blockIdx.x-1, blockIdx.y, blockIdx.z, box)]) ;
 		}
 
-		if (type[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box)] != 1)
+		if (type[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box)] == 2)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -=
 				(gridPressure[gind(blockIdx.x, blockIdx.y , blockIdx.z, box)] - gridPressure[gind(blockIdx.x, blockIdx.y-1, blockIdx.z, box)]);
 		}
 
-		if (type[gind(blockIdx.x, blockIdx.y, blockIdx.z -1, box)] != 1)
+		if (type[gind(blockIdx.x, blockIdx.y, blockIdx.z -1, box)] == 2)
 		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z , MACbox)].z -=
 				(gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z , box)] - gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z-1, box)]);
@@ -716,10 +715,9 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 		
 #ifdef D_DIV
 		
-		if (fabsf(div) > 0.9)
-		{
-			printf("la divergence %f \n", div);
-		}
+
+		printf("la divergence %f \n", div);
+		
 
 #endif
 
@@ -732,6 +730,11 @@ __global__ void add_pressure_k(uint3 MACbox, uint3 box, float* gridPressure, flo
 		*/
 	}
 
+	/*
+	if (type[index] == 0)
+	{
+		printf("case de type %d pression %f", type[index], gridPressure[gind(blockIdx.x, blockIdx.y, blockIdx.z, box)]);
+	}*/
 
 }
 
@@ -929,7 +932,7 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 		flipEngine->type,
 		flipEngine->tileSize,
 		flipEngine->MACGridWeight,
-		24.0);
+		8.0*3);
 
 	getLastCudaError("Kernel execution failed: div_calc_k");
 
