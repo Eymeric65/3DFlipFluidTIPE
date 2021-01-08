@@ -65,18 +65,18 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 
 	cudaMalloc(&MACGridSpeedSave, MACIndiceCount * sizeof(float3));
 
-	cudaMalloc(&MACGridSpeed, (MACIndiceCount) * sizeof(float3));
+	cudaMalloc(&MACGridSpeed, (MACIndiceCount) * sizeof(float3));//
 	cudaMemset(MACGridSpeed, 0, (MACIndiceCount) * sizeof(float3));
 
-	cudaMalloc(&MACGridWeight, MACIndiceCount * sizeof(float3));
+	cudaMalloc(&MACGridWeight, MACIndiceCount * sizeof(float3));//
 	cudaMemset(MACGridWeight, 0, MACIndiceCount * sizeof(float3));
 
-	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float));
+	cudaMalloc(&GridPressureB, IndiceCount * sizeof(float)); //
 	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float));
 
 	cudaMalloc(&GridPressureA, IndiceCount * sizeof(float));
 
-	cudaMalloc(&type, IndiceCount * sizeof(unsigned int));
+	cudaMalloc(&type, IndiceCount * sizeof(unsigned int)); //
 
 	cudaMalloc(&GridDiv, IndiceCount * sizeof(float));
 
@@ -88,7 +88,8 @@ void FlipSim::TransferToGrid()
 {
 	cudaMemset(MACGridWeight, 0, MACIndiceCount * sizeof(float3));
 	cudaMemset(MACGridSpeed, 0, MACIndiceCount * sizeof(float3));
-
+	cudaMemset(type,0, IndiceCount * sizeof(unsigned int));
+	cudaMemset(GridDiv, 0, IndiceCount * sizeof(float));
 	//std::cout << " coucou " << std::endl;
 
 	TransfertToGridV2(this);

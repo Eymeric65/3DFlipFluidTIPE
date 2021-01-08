@@ -27,7 +27,7 @@
 
 #define WAITTIME 2
 
-#define BREAKTIME 4
+#define BREAKTIME 40
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -106,19 +106,19 @@ int main()
 
     //experience assez grande
     //test drop 
-    /*
+    
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 20; x += 1)
+    for (int x = 0; x < 50; x += 1)
     {
-        for (int y = 0; y < 10; y += 1)
+        for (int y = 0; y < 20; y += 1)
         {
-            for (int z = 0; z < 20; z += 1)
+            for (int z = 0; z < 55; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 1.0f + 2.5f;
-                translation.y = (float)y / 1.0f +170.5f;
-                translation.z = (float)z / 1.0f + 2.5f;
+                translation.x = (float)x / 2.0f + 1.5f;
+                translation.y = (float)y / 2.0f +1.5f;
+                translation.z = (float)z / 2.0f + 1.5f;
 
                 position.push_back(translation);
 
@@ -129,20 +129,20 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(24, 200.0, 24, 2.0, PartCount,0.01);
-    */
-
+    FlipSim FlipEngine(102, 22.0, 30, 1.0, PartCount,0.01);
+                        //longueur 1000, hauteur 200, largeur 280
+    /*
     int index = 0;
     float offset = 0.0f;
     for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 35; y += 1)
+        for (int y = 0; y < 10; y += 1)
         {
             for (int z = 0; z < 35; z += 1)
             {
                 glm::vec3 translation;
                 translation.x = (float)x / 0.5f + 4.5f;
-                translation.y = (float)y / 0.5f + 4.5f;
+                translation.y = (float)y / 0.5f + 55.5f;
                 translation.z = (float)z / 0.5f + 4.5f;
 
                 position.push_back(translation);
@@ -155,6 +155,8 @@ int main()
 
 
     FlipSim FlipEngine(180, 80, 80, 4, PartCount, 0.01);
+
+    */
     /*
     int index = 0;
     float offset = 0.0f;
@@ -293,7 +295,7 @@ int main()
             glfwSetWindowTitle(window, fps);
         }
 
-        FlipEngine.TimeStep = deltaTime;
+        //FlipEngine.TimeStep = deltaTime;
 
         //printf("diff de temps %f \n", deltaTime);
 
@@ -317,7 +319,7 @@ int main()
         glm::mat4 view = camera.GetViewMatrix();
 
 
-        view = glm::translate(view, glm::vec3(-60.0f, -55.0f, -150.0f));
+        view = glm::translate(view, glm::vec3(-30.0f, -15.0f, -75.0f));
 
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
 
@@ -354,9 +356,9 @@ int main()
 
             FlipEngine.TransferToGrid();
 
-            if (glfwGetTime() < BREAKTIME+WAITTIME)
+            if (glfwGetTime() < BREAKTIME+WAITTIME )
             {
-                //FlipEngine.TempWalls(true);
+                FlipEngine.TempWalls(true);
             }
 
 
