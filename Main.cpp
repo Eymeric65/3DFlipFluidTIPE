@@ -8,6 +8,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <cuda_runtime.h>
@@ -28,6 +29,8 @@
 #define WAITTIME 2
 
 #define BREAKTIME 40
+
+#define SPHERE_SIZE 0.2
 
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -109,7 +112,7 @@ int main()
     
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 50; x += 1)
+    for (int x = 0; x < 10; x += 1)
     {
         for (int y = 0; y < 20; y += 1)
         {
@@ -313,13 +316,13 @@ int main()
 
         firstshader.use();
 
-        glm::mat4 model = glm::mat4(1.0f);
+        glm::mat4 model = glm::scale(glm::vec3(SPHERE_SIZE));
         //glm::mat4 view = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
         glm::mat4 view = camera.GetViewMatrix();
 
 
-        view = glm::translate(view, glm::vec3(-30.0f, -15.0f, -75.0f));
+        view = glm::translate(view, glm::vec3(-30.0f, -15.0f, -45.0f));
 
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 10000.0f);
 

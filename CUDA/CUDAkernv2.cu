@@ -175,46 +175,47 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 		Pvit[index].y = pvity;
 		Pvit[index].z = pvitz;
 
-		
-
-
 	}
 }
 //Apres Debugage l'interpolation est correct !! 
 
 
 // normaliser la grille
+
+
 #ifdef DEBUG
-__global__ void GridNormalV2_k(uint3 MACbox,float3* MACgridSpeed, float3* MACweight,float* Tweight, float3* MACgridSpeedSave)
-{
-	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox);
 
-	atomicAdd(Tweight, MACweight[index].x+ MACweight[index].y+ MACweight[index].z);
+//__global__ void GridNormalV2_k(uint3 MACbox,float3* MACgridSpeed, float3* MACweight,float* Tweight, float3* MACgridSpeedSave)
+//{
+//	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox);
+//
+//	atomicAdd(Tweight, MACweight[index].x+ MACweight[index].y+ MACweight[index].z);
+//
+//	if (MACweight[index].x != 0)
+//	{
+//		MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
+//		MACgridSpeedSave[index].x = MACgridSpeed[index].x;
+//
+//	}
+//	if (MACweight[index].y != 0)
+//	{
+//		MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
+//		MACgridSpeedSave[index].y = MACgridSpeed[index].y;
+//	}
+//	if (MACweight[index].z != 0)
+//	{
+//		MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
+//		MACgridSpeedSave[index].z = MACgridSpeed[index].z;
+//	}
+//
+//#ifdef D_VIT
+//
+//	printf("vitesse de la case %d %d %d est %f %f %f \n", blockIdx.x, blockIdx.y, blockIdx.z, MACgridSpeed[index].x, MACgridSpeed[index].y, MACgridSpeed[index].z);
+//
+//#endif
+//
+//}
 
-	if (MACweight[index].x != 0)
-	{
-		MACgridSpeed[index].x = MACgridSpeed[index].x / MACweight[index].x;
-		MACgridSpeedSave[index].x = MACgridSpeed[index].x;
-
-	}
-	if (MACweight[index].y != 0)
-	{
-		MACgridSpeed[index].y = MACgridSpeed[index].y / MACweight[index].y;
-		MACgridSpeedSave[index].y = MACgridSpeed[index].y;
-	}
-	if (MACweight[index].z != 0)
-	{
-		MACgridSpeed[index].z = MACgridSpeed[index].z / MACweight[index].z;
-		MACgridSpeedSave[index].z = MACgridSpeed[index].z;
-	}
-
-#ifdef D_VIT
-
-	printf("vitesse de la case %d %d %d est %f %f %f \n", blockIdx.x, blockIdx.y, blockIdx.z, MACgridSpeed[index].x, MACgridSpeed[index].y, MACgridSpeed[index].z);
-
-#endif
-
-}
 #else
 __global__ void GridNormalV2_k(uint3 MACbox, float3* MACgridSpeed, float3* MACweight, float3* MACgridSpeedSave)
 {
@@ -248,8 +249,8 @@ __global__ void set_typeWater_k(uint3 box,uint3 MACbox, float3* MACweight, unsig
 
 
 	if (
-		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x != 0 && MACweight[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x != 0 )||
-		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y != 0 && MACweight[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y != 0 )||
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x != 0 && MACweight[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x != 0 )&&
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y != 0 && MACweight[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y != 0 )&&
 		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z != 0&& MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z != 0) )
 	{
 		type[index] = 2;
@@ -358,7 +359,7 @@ __global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpe
 		//Gravité
 #ifdef GRAV
 		MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
-		MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
+
 #endif
 		//force Centrale
 #ifdef CENTRAL
@@ -387,30 +388,31 @@ __global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpe
 
 }
 
-__global__ void euler_k(int partCount,float3* Ppos,float3* Pvit,float tstep,float tsize)
-{
-	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
-	unsigned int stride = blockDim.x * gridDim.x;
-	for (unsigned int i = index; i < partCount; i += stride)
-	{
 
-#ifdef CFL_FORCED
-
-		Ppos[index].x += absmin(Pvit[index].x * tstep, tsize*0.95);
-		Ppos[index].y += absmin(Pvit[index].y * tstep, tsize*0.95);
-		Ppos[index].z += absmin(Pvit[index].z * tstep, tsize*0.95);
-
-		//printf("hmm %f \n", absmin(Pvit[index].y * tstep, tsize * 0.98));
-
-#else
-
-		Ppos[index].x += Pvit[index].x * tstep;
-		Ppos[index].y += Pvit[index].y * tstep;
-		Ppos[index].z += Pvit[index].z * tstep;
-#endif
-
-	}
-}
+//__global__ void euler_k(int partCount,float3* Ppos,float3* Pvit,float tstep,float tsize)
+//{
+//	unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
+//	unsigned int stride = blockDim.x * gridDim.x;
+//	for (unsigned int i = index; i < partCount; i += stride)
+//	{
+//
+//#ifdef CFL_FORCED
+//
+//		Ppos[index].x += absmin(Pvit[index].x * tstep, tsize*0.95);
+//		Ppos[index].y += absmin(Pvit[index].y * tstep, tsize*0.95);
+//		Ppos[index].z += absmin(Pvit[index].z * tstep, tsize*0.95);
+//
+//		//printf("hmm %f \n", absmin(Pvit[index].y * tstep, tsize * 0.98));
+//
+//#else
+//
+//		Ppos[index].x += Pvit[index].x * tstep;
+//		Ppos[index].y += Pvit[index].y * tstep;
+//		Ppos[index].z += Pvit[index].z * tstep;
+//#endif
+//
+//	}
+//}
 
 __global__ void RKT2_k(int partCount, float3* Ppos, float3* Pvit, float tstep, float tsize, float3* MACGridSpeed,uint3 MACbox,uint3 box,unsigned int* type)
 {

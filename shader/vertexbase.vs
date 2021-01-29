@@ -16,7 +16,7 @@ out float bubbleintense;
 void main()
 {
    FragPos = vec3(model * vec4(aPos, 1.0));
-   gl_Position = projection * view * model * (vec4(aPos, 1.0) + vec4(ainstancepos,1.0));
+   gl_Position = projection * view * (model * vec4(aPos, 1.0) + vec4(ainstancepos,1.0));
    Normal = aPos ;
    bubbleintense = bubbleintensity;
 }
