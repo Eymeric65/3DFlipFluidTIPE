@@ -100,7 +100,7 @@ int main()
     std::vector<GLfloat> v_vertex_data;
     std::vector<GLuint> v_indices;
 
-    int vertcount = spherecreate(v_vertex_data, v_indices, 10, 10);
+    int vertcount = spherecreate(v_vertex_data, v_indices, 5, 5);
 
     std::vector<glm::vec3> position;
 
@@ -112,16 +112,19 @@ int main()
     
     int index = 0;
     float offset = 0.0f;
-    for (int x = 0; x < 10; x += 1)
+
+    for (int x = 0; x < 40; x += 1)
     {
-        for (int y = 0; y < 20; y += 1)
+
+
+        for (int y = 0; y < 30; y += 1)
         {
             for (int z = 0; z < 55; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 2.0f + 1.5f;
-                translation.y = (float)y / 2.0f +1.5f;
-                translation.z = (float)z / 2.0f + 1.5f;
+                translation.x = (float)x / 2.0f + 1.141592f;
+                translation.y = (float)y / 2.0f +1.141592f;
+                translation.z = (float)z / 2.0f + 1.141592f;
 
                 position.push_back(translation);
 
@@ -132,7 +135,7 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(102, 22.0, 30, 1.0, PartCount,0.01);
+    FlipSim FlipEngine(102, 22.0, 30, 1.0, PartCount,0.05);
                         //longueur 1000, hauteur 200, largeur 280
     /*
     int index = 0;
@@ -213,6 +216,7 @@ int main()
     glGenBuffers(1, &EBO);
 
     // bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, v_vertex_data.size() * sizeof(GLfloat), v_vertex_data.data(), GL_STATIC_DRAW);

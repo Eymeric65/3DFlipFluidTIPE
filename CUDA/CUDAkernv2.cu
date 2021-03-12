@@ -16,11 +16,12 @@
 
 #define FLIPNESS 0.90
 
+
 #define RK2
 //#define BOUNDARY_WALL_ONLY
 
 #define GRAV
-#define GRAVITY 20
+#define GRAVITY 9.81
 
 //#define CENTRAL
 
@@ -34,7 +35,7 @@
 //#define FASTJAC // bon enfaite c'est pas plus rapide de paralléliser
 
 #define SHORTCOMPUTE
-#define LESSW
+//#define LESSW
 
 __device__ unsigned int gind(unsigned int indiceX, unsigned int indiceY, unsigned int indiceZ, uint3 BoxIndice)
 {
@@ -123,7 +124,7 @@ __global__ void TrToGrV2_k(uint3 MACbox,unsigned int partcount,float tsize,float
 }
 // apres debug la trilinéarisation est correct !!! 
 
-// verifier jusqua ici
+// La théorie est d'accord avec cette fonction 
 
 //fonction copier du dessus qui transfert la vitesse de la grille au particule
 __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, float3* MACgridSpeed, float3* MACweight, float3* Ppos, float3* Pvit, float3* MACgridSpeedSave,float* Pcol)
@@ -165,11 +166,10 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 		float pvitz = zvit * (1 - FLIPNESS) + (zvit - Ozvit + Pvit[index].z) * FLIPNESS;
 
 		float dist = pow(pvitx - Pvit[index].x, 2) + pow(pvity - Pvit[index].y, 2) + pow(pvitz - Pvit[index].z, 2);
+		float vit = pow( Pvit[index].x, 2) + pow(Pvit[index].y, 2) + pow( Pvit[index].z, 2);
 
-		if (dist > BUBBLETRSH)
-		{
-			Pcol[index] = (dist)/25;
-		}
+		Pcol[index] = (vit)/4;
+		
 
 		Pvit[index].x = pvitx;
 		Pvit[index].y = pvity;
@@ -178,7 +178,7 @@ __global__ void TrToPrV2_k(uint3 MACbox, unsigned int partcount, float tsize, fl
 	}
 }
 //Apres Debugage l'interpolation est correct !! 
-
+// la théorie est d'accord avec cette fonction
 
 // normaliser la grille
 
@@ -239,6 +239,7 @@ __global__ void GridNormalV2_k(uint3 MACbox, float3* MACgridSpeed, float3* MACwe
 
 }
 #endif
+// la théorie est d'accord avec cette fonction
 
 __global__ void set_typeWater_k(uint3 box,uint3 MACbox, float3* MACweight, unsigned int* type)
 {
@@ -249,13 +250,13 @@ __global__ void set_typeWater_k(uint3 box,uint3 MACbox, float3* MACweight, unsig
 
 
 	if (
-		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x != 0 && MACweight[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x != 0 )&&
-		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y != 0 && MACweight[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y != 0 )&&
-		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z != 0&& MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z != 0) )
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x != 0 || MACweight[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x != 0 ) ||
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y != 0 || MACweight[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y != 0 ) ||
+		(MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z != 0 || MACweight[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z != 0) )
 	{
 		type[index] = 2;
 	
-		/*
+		
 #ifdef LESSW
 #else
 		if(blockIdx.x>=1)
@@ -283,7 +284,7 @@ __global__ void set_typeWater_k(uint3 box,uint3 MACbox, float3* MACweight, unsig
 			type[gind(blockIdx.x , blockIdx.y, blockIdx.z+1, box)] = 2;
 		}
 #endif
-		*/
+		
 	}
 
 }
@@ -325,6 +326,7 @@ __global__ void set_typeWalls_k(uint3 box, unsigned int* type, float tsize)
 	{
 		type[index] = 1;
 	}
+	// fonction pour autiste bien sure qu'elle marche
 
 #ifdef DEBUG
 #ifdef D_TYPE
@@ -345,7 +347,7 @@ __global__ void set_typeTempWall_k(uint3 box, unsigned int* type,bool tr,float t
 	{
 		type[index] = 1;
 	}
-
+	// de même 
 	
 }
 
@@ -353,12 +355,15 @@ __global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpe
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
 
+	MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
+	
 	//if (type[index] == 2)
-	if(type[index] == 2)
+	if(type[index] != 4)
 	{
 		//Gravité
 #ifdef GRAV
-		MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
+		//MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
+		//MACgridSpeed[gind(blockIdx.x, blockIdx.y-1, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
 
 #endif
 		//force Centrale
