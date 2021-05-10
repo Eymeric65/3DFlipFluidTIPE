@@ -3,6 +3,7 @@
 
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <algorithm>
 
@@ -10,6 +11,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include "CLASSsim/FLIPimpl.h"
 
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
@@ -22,7 +25,7 @@
 
 #include "Visual/GeoFunc.h"
 
-#include "CLASSsim/FLIPimpl.h"
+
 
 //#define ONESTEPSIM
 
@@ -55,8 +58,11 @@ float lastFrame = 0.0f;
 
 int main()
 {
+    //fichier de sortie
+    //std::ofstream Result;
+    //Result.open("Result/Result_O1.txt");
 
-
+   
     // a ne pas modifier ----------------------------------------------------------------------------------------------------
     // glfw: initialize and configure
     // ------------------------------
@@ -104,8 +110,6 @@ int main()
 
     std::vector<glm::vec3> position;
 
-    ///std::cout << vertcount << std::endl;
-
 
     //experience assez grande
     //test drop 
@@ -123,7 +127,8 @@ int main()
             {
                 glm::vec3 translation;
                 translation.x = (float)x / 2.0f + 1.141592f;
-                translation.y = (float)y / 2.0f +1.141592f;
+                translation.y = (float)y / 2.0f +5.141592f;
+
                 translation.z = (float)z / 2.0f + 1.141592f;
 
                 position.push_back(translation);
@@ -134,23 +139,26 @@ int main()
 
     const int PartCount = position.size();
 
-
+    //Result << PartCount<<","<<0.1;
 
     FlipSim FlipEngine(102, 22.0, 30, 1, PartCount,0.1);
-                        //longueur 1000, hauteur 200, largeur 280
+
+    
     /*
+                        //longueur 1000, hauteur 200, largeur 280
+    
     int index = 0;
     float offset = 0.0f;
     for (int x = 0; x < 30; x += 1)
     {
-        for (int y = 0; y < 10; y += 1)
+        for (int y = 0; y < 35; y += 1)
         {
-            for (int z = 0; z < 35; z += 1)
+            for (int z = 0; z < 30; z += 1)
             {
                 glm::vec3 translation;
-                translation.x = (float)x / 0.5f + 4.5f;
-                translation.y = (float)y / 0.5f + 55.5f;
-                translation.z = (float)z / 0.5f + 4.5f;
+                translation.x = (float)x / 2.0f + 1.5f;
+                translation.y = (float)y / 2.0f + 1.5f;
+                translation.z = (float)z / 2.0f + 1.5f;
 
                 position.push_back(translation);
 
@@ -161,9 +169,9 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(180, 80, 80, 4, PartCount, 0.01);
-
+    FlipSim FlipEngine(40,20, 20, 1, PartCount, 0.1);
     */
+    
     /*
     int index = 0;
     float offset = 0.0f;
@@ -364,11 +372,10 @@ int main()
 
             FlipEngine.TransferToGrid();
 
-            if (glfwGetTime() < BREAKTIME+WAITTIME )
+            if (glfwGetTime() < BREAKTIME + WAITTIME)
             {
                 FlipEngine.TempWalls(true);
             }
-
 
             FlipEngine.AddExternalForces();
 
@@ -378,15 +385,22 @@ int main()
 
             FlipEngine.AddPressure();
 
+            FlipEngine.Boundaries();
+
             FlipEngine.TransferToParticule();
 
             FlipEngine.Integrate();
 
             FlipEngine.EndCompute();
+
+           
         }
 
 #endif
         
+
+        
+
         //--------------------------------------------------------------------------------
 
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
@@ -401,6 +415,8 @@ int main()
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        //std::cout << position[15000].x << std::endl;
     }
 
 
@@ -411,7 +427,7 @@ int main()
     //glDeleteBuffers(1, &EBO);
     //glDeleteProgram(shaderProgram);
 
-    ///7PartEngine.endSystem();
+    ///PartEngine.endSystem();
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------

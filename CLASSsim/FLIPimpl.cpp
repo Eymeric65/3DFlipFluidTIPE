@@ -26,14 +26,17 @@ FlipSim::FlipSim(float width, float height,float length, float tsize, unsigned i
 
 	TimeStep = tstep;
 
-
+	
 
 	std::cout << "reset partvit" << std::endl;
 	//cudaMalloc(&pos, PartCount * sizeof(float3));
 
 	BoxSize = make_float3(width, height, length);
 
+	//positions = 2;
+
 	tileSize = tsize;
+
 
 	BoxIndice = make_uint3((int)(BoxSize.x / tileSize),
 							(int)(BoxSize.y/ tileSize),
@@ -109,7 +112,7 @@ void FlipSim::PressureCompute()
 {
 	cudaMemset(GridPressureB, 0, IndiceCount * sizeof(float));
 
-	JacobiIterV2(this, 50);
+	JacobiIterV2(this, 100);
 
 }
 
@@ -164,7 +167,9 @@ void FlipSim::EndCompute()
 	cudaGraphicsUnmapResources(1, &cuda_pos_resource, 0);
 
 	cudaGraphicsUnmapResources(1, &cuda_col_resource, 0);
-	//std::cout << "la taille est " << vit[0].x << std::endl;
+	//std::cout << "la taille est " << Partpos[0].x << std::endl;
+
+	//cudaMemcpy(&PartposExt,&Partpos,PartCount* 3 * sizeof(float), cudaMemcpyHostToDevice);
 
 }
 

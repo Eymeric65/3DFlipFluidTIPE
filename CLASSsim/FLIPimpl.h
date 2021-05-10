@@ -14,8 +14,12 @@ class FlipSim
 
 public:
 
+	//float positions;
+
 	float3 BoxSize;
 	float tileSize;
+	
+	
 
 	uint3 BoxIndice;
 
@@ -40,6 +44,7 @@ public:
 	float3* Partpos;
 	
 	float3* Partvit;
+
 
 	float* Partcol;
 
