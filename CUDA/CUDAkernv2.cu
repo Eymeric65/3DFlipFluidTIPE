@@ -10,11 +10,11 @@
 
 //#define D_DIV
 
-//#define CFL_FORCED
+#define CFL_FORCED
 
 
 
-#define FLIPNESS 0.90
+#define FLIPNESS 0.70
 
 
 #define RK2
@@ -40,6 +40,18 @@
 __device__ unsigned int gind(unsigned int indiceX, unsigned int indiceY, unsigned int indiceZ, uint3 BoxIndice)
 {
 	return indiceZ + indiceY * BoxIndice.z + indiceX * BoxIndice.z * BoxIndice.y;
+}
+
+__device__ float  gequal(float a)
+{
+	if (a > 0)
+	{
+		return a;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 __device__ float3 interpolate(float3 pos,uint3 box,float3* gridSpeed,float tsize)
@@ -355,12 +367,13 @@ __global__ void add_external_forces_k(uint3 box,uint3 MACbox, float3* MACgridSpe
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
 
-	MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
+	//MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
 	
 	//if (type[index] == 2)
-	if(type[index] != 4)
+	if(type[index] != 1)
 	{
 		//Gravité
+		MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
 #ifdef GRAV
 		//MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
 		//MACgridSpeed[gind(blockIdx.x, blockIdx.y-1, blockIdx.z, MACbox)].y -= GRAVITY * tstep;
@@ -491,7 +504,71 @@ __global__ void RKT2_k(int partCount, float3* Ppos, float3* Pvit, float tstep, f
 
 }
 
-__global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsigned int* type)
+//__global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsigned int* type)
+//{
+//	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
+//
+//	if (type[index] == 1)
+//	{
+//		//printf("la case %d %d %d est solide \n", blockIdx.x, blockIdx.y, blockIdx.z);
+//
+//		if (blockIdx.x >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x>0)
+//		{
+//			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x = 0;
+//#ifdef BOUNDARY_WALL_ONLY
+//#else
+//			MACgridSpeed[gind(blockIdx.x-1, blockIdx.y, blockIdx.z, MACbox)].x = 0;
+//#endif
+//		}
+//
+//		if (blockIdx.y >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y > 0)
+//		{
+//			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y = 0;
+//#ifdef BOUNDARY_WALL_ONLY
+//#else
+//			MACgridSpeed[gind(blockIdx.x , blockIdx.y-1, blockIdx.z, MACbox)].y = 0;
+//#endif
+//		}
+//
+//		if (blockIdx.z >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z > 0)
+//		{
+//			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z = 0;
+//#ifdef BOUNDARY_WALL_ONLY
+//#else
+//			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z-1, MACbox)].z = 0;
+//#endif
+//		}
+//
+//
+//		if (blockIdx.x <= box.x-2 && MACgridSpeed[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x < 0)
+//		{
+//			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x = 0;
+//#ifdef BOUNDARY_WALL_ONLY
+//#else
+//			MACgridSpeed[gind(blockIdx.x + 2, blockIdx.y, blockIdx.z, MACbox)].x = 0;
+//#endif
+//		}
+//
+//		if (blockIdx.y <= box.y - 2 && MACgridSpeed[gind(blockIdx.x , blockIdx.y +1, blockIdx.z, MACbox)].y < 0)
+//		{
+//			MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y = 0;
+//#ifdef BOUNDARY_WALL_ONLY
+//#else
+//			MACgridSpeed[gind(blockIdx.x , blockIdx.y+2, blockIdx.z, MACbox)].y = 0;
+//#endif
+//		}
+//
+//		if (blockIdx.z <= box.z - 2 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z+1, MACbox)].z < 0)
+//		{
+//			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z+1, MACbox)].z = 0;
+//#ifdef BOUNDARY_WALL_ONLY
+//#else
+//			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z+2, MACbox)].z = 0;
+//#endif
+//		}
+//	}
+//}
+__global__ void boundaries_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, unsigned int* type)
 {
 	unsigned int index = gind(blockIdx.x, blockIdx.y, blockIdx.z, box);
 
@@ -499,60 +576,34 @@ __global__ void boundaries_k(uint3 box,uint3 MACbox, float3* MACgridSpeed, unsig
 	{
 		//printf("la case %d %d %d est solide \n", blockIdx.x, blockIdx.y, blockIdx.z);
 
-		if (blockIdx.x >= 1&& MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x>0)
-		{
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x = 0;
-#ifdef BOUNDARY_WALL_ONLY
-#else
-			MACgridSpeed[gind(blockIdx.x-1, blockIdx.y, blockIdx.z, MACbox)].x = 0;
-#endif
-		}
 
-		if (blockIdx.y >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y > 0)
-		{
-			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y = 0;
-#ifdef BOUNDARY_WALL_ONLY
-#else
-			MACgridSpeed[gind(blockIdx.x , blockIdx.y-1, blockIdx.z, MACbox)].y = 0;
-#endif
-		}
+		
 
-		if (blockIdx.z >= 1 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z > 0)
-		{
+
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y =0;
+
+		
+
+
 			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z = 0;
-#ifdef BOUNDARY_WALL_ONLY
-#else
-			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z-1, MACbox)].z = 0;
-#endif
-		}
+
+		
 
 
-		if (blockIdx.x <= box.x-2 && MACgridSpeed[gind(blockIdx.x+1, blockIdx.y, blockIdx.z, MACbox)].x < 0)
-		{
 			MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x = 0;
-#ifdef BOUNDARY_WALL_ONLY
-#else
-			MACgridSpeed[gind(blockIdx.x + 2, blockIdx.y, blockIdx.z, MACbox)].x = 0;
-#endif
-		}
 
-		if (blockIdx.y <= box.y - 2 && MACgridSpeed[gind(blockIdx.x , blockIdx.y +1, blockIdx.z, MACbox)].y < 0)
-		{
-			MACgridSpeed[gind(blockIdx.x , blockIdx.y+1, blockIdx.z, MACbox)].y = 0;
-#ifdef BOUNDARY_WALL_ONLY
-#else
-			MACgridSpeed[gind(blockIdx.x , blockIdx.y+2, blockIdx.z, MACbox)].y = 0;
-#endif
-		}
+		
 
-		if (blockIdx.z <= box.z - 2 && MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z+1, MACbox)].z < 0)
-		{
-			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z+1, MACbox)].z = 0;
-#ifdef BOUNDARY_WALL_ONLY
-#else
-			MACgridSpeed[gind(blockIdx.x , blockIdx.y, blockIdx.z+2, MACbox)].z = 0;
-#endif
-		}
+
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y = 0;
+
+		
+
+
+			MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z = 0;
+
+		
 	}
 }
 
@@ -575,8 +626,9 @@ __global__ void div_calc_k(float3* MACgridSpeed, uint3 box, uint3 MACbox,float* 
 		gridDiv[index] =
 			(MACgridSpeed[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, MACbox)].x - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].x +
 				MACgridSpeed[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, MACbox)].y - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].y +
-				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z)
-			/ (tsize) - fmaxf(dens - density, 0);
+				MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, MACbox)].z - MACgridSpeed[gind(blockIdx.x, blockIdx.y, blockIdx.z, MACbox)].z -
+				fmaxf(dens - density, 0))
+			/ (tsize) ;
 
 	}
 }
@@ -653,13 +705,56 @@ __global__ void jacobi_iter_k(uint3 box, uint3 MACbox, float3* MACgridSpeed, flo
 		float div = gridDiv[index];
 
 
-		gridPressureA[index] =
-			(gridPressureB[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] +
-				gridPressureB[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] +
-				gridPressureB[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box)] +
-				gridPressureB[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, box)] +
-				gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z - 1, box)] +
-				gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, box)] - div) / 6;
+		//gridPressureA[index] =
+		//	(gridPressureB[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] +
+		//		gridPressureB[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] +
+		//		gridPressureB[gind(blockIdx.x, blockIdx.y - 1, blockIdx.z, box)] +
+		//		gridPressureB[gind(blockIdx.x, blockIdx.y + 1, blockIdx.z, box)] +
+		//		gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z - 1, box)] +
+		//		gridPressureB[gind(blockIdx.x, blockIdx.y, blockIdx.z + 1, box)] - div) / 6;
+
+		int Wc = 0; 
+
+		gridPressureA[index] = 0;
+
+		if (type[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)] != 1)
+		{
+			Wc += 1 ;
+			gridPressureA[index] += gridPressureB[gind(blockIdx.x - 1, blockIdx.y, blockIdx.z, box)];
+		}
+		if (type[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)] != 1)
+		{
+			Wc += 1;
+			gridPressureA[index] += gridPressureB[gind(blockIdx.x + 1, blockIdx.y, blockIdx.z, box)];
+		}
+		if (type[gind(blockIdx.x , blockIdx.y - 1 , blockIdx.z, box)] != 1)
+		{
+			Wc += 1;
+			gridPressureA[index] += gridPressureB[gind(blockIdx.x , blockIdx.y -1 , blockIdx.z, box)];
+		}
+		if (type[gind(blockIdx.x , blockIdx.y + 1, blockIdx.z, box)] != 1)
+		{
+			Wc += 1;
+			gridPressureA[index] += gridPressureB[gind(blockIdx.x , blockIdx.y + 1 , blockIdx.z, box)];
+		}
+		if (type[gind(blockIdx.x, blockIdx.y, blockIdx.z - 1, box)] != 1)
+		{
+			Wc += 1;
+			gridPressureA[index] += gridPressureB[gind(blockIdx.x , blockIdx.y, blockIdx.z - 1, box)];
+		}
+		if (type[gind(blockIdx.x , blockIdx.y, blockIdx.z +1, box)] != 1)
+		{
+			Wc += 1;
+			gridPressureA[index] += gridPressureB[gind(blockIdx.x , blockIdx.y, blockIdx.z + 1, box)];
+		}
+		if (Wc != 0)
+		{
+			gridPressureA[index] -= div;
+
+			gridPressureA[index] /= Wc;
+		}
+
+
 #endif
 
 		//printf("il y a une difference de %f %f %f\n", pressure - gridPressureA[index], pressure, gridPressureA[index]);
@@ -959,7 +1054,7 @@ void JacobiIterV2(FlipSim * flipEngine,int step)
 		flipEngine->type,
 		flipEngine->tileSize,
 		flipEngine->MACGridWeight,
-		8.0*3);
+		12.0*3);
 
 	getLastCudaError("Kernel execution failed: div_calc_k");
 

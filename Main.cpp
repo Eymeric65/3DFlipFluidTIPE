@@ -135,7 +135,8 @@ int main()
     const int PartCount = position.size();
 
 
-    FlipSim FlipEngine(102, 22.0, 30, 1.0, PartCount,0.05);
+
+    FlipSim FlipEngine(102, 22.0, 30, 1, PartCount,0.1);
                         //longueur 1000, hauteur 200, largeur 280
     /*
     int index = 0;
